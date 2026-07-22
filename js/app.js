@@ -689,22 +689,33 @@
     host.querySelector('[data-x="ok"]').addEventListener("click", () => { close(); onOk && onOk(); });
   }
 
-  function connectModal() {
+  function syncModal() {
     const host = document.createElement("div");
     host.className = "modal-center";
     const configured = D.available();
+    const linked = D.wasConnected();
+    const active = D.isConnected();
+    const account = D.user();
     host.innerHTML = `
       <div class="scrim open" style="position:absolute"></div>
       <div class="modal-card sheet">
-        <h3>${I.cloud} Sincronizar com o Google Drive</h3>
-        ${configured ? `
-          <p>Conecte sua conta do Google e seu texto e etapas passam a viver no <b>seu próprio Drive</b> — sincronizando entre o computador e o celular. O app só acessa o próprio arquivo que ele cria.</p>
-          <button class="g-btn" id="cmConnect">${I.google} Conectar com o Google</button>
-          <div class="note" style="margin-top:14px">As mídias (áudio/vídeo) ficam salvas em cada aparelho, por serem pesadas.</div>
+        <h3>${I.cloud} Sincronização</h3>
+        ${configured && linked ? `
+          <div class="sync-account">
+            <span class="sync-account__dot ${active ? "is-active" : ""}"></span>
+            <div><b>${active ? "Google Drive sincronizado" : "Google Drive vinculado"}</b><small>${esc(account || "Conta Google")}</small></div>
+          </div>
+          <p>Suas ideias continuam neste aparelho e também podem ser atualizadas pelo seu Google Drive.</p>
+          <div class="sync-actions">
+            <button class="g-btn" id="cmSync">${I.refresh} Atualizar agora</button>
+            <button class="g-btn" id="cmSwitch">${I.google} Trocar de conta</button>
+            <button class="g-btn danger-outline" id="cmDisconnect">${I.off} Desconectar</button>
+          </div>
         ` : `
-          <p>A sincronização com o Drive ainda não foi configurada neste app. Se você é quem está publicando o Faísca, cole seu <b>Client ID do Google</b> em <code>js/config.js</code> (passo a passo no <b>LEIA-ME.md</b>).</p>
-          <div class="note">Enquanto isso, o app funciona normal e salva tudo neste aparelho. Use <b>Fazer backup</b> no menu pra guardar seus dados.</div>
+          <p>O Faísca funciona normalmente sem conta. Suas ideias ficam salvas somente neste aparelho.</p>
+          ${configured ? `<button class="g-btn" id="cmConnect">${I.google} Sincronizar com o Google</button>` : `<div class="note">A sincronização com o Drive ainda não foi configurada.</div>`}
         `}
+        <div class="note" style="margin-top:14px">Cada pessoa usa o próprio Drive. Outros usuários não veem suas ideias.</div>
         <div class="row-btns"><button data-x="cancel">Fechar</button></div>
       </div>`;
     document.body.appendChild(host);
@@ -713,7 +724,25 @@
     host.querySelector(".scrim").addEventListener("click", close);
     const cb = host.querySelector("#cmConnect");
     if (cb) cb.addEventListener("click", async () => { close(); await Sync.connect(); });
+    const sync = host.querySelector("#cmSync");
+    if (sync) sync.addEventListener("click", async () => { close(); active ? await Sync.full(true) : await Sync.connect(); });
+    const change = host.querySelector("#cmSwitch");
+    if (change) change.addEventListener("click", () => {
+      close();
+      confirmModal("Trocar a conta do Google?", "As ideias que estão neste aparelho serão sincronizadas com a nova conta escolhida.", "Trocar conta", async () => {
+        D.disconnect(); Sync.setStatus("off"); await Sync.connect({ selectAccount: true });
+      });
+    });
+    const disconnect = host.querySelector("#cmDisconnect");
+    if (disconnect) disconnect.addEventListener("click", () => {
+      close();
+      confirmModal("Desconectar do Google Drive?", "As ideias deste aparelho continuam aqui. Apenas a sincronização será desligada.", "Desconectar", () => {
+        D.disconnect(); Sync.setStatus("off"); toast("Drive desconectado");
+      }, true);
+    });
   }
+
+  const connectModal = syncModal;
 
   function aboutModal() {
     confirmModal("Faísca 🔥", "Seu estúdio de ideias. Anote fácil, grave áudio e vídeo, organize cada ideia e acompanhe do rascunho até a postagem. Seus dados são seus — ficam neste aparelho e, se você conectar, o texto sincroniza no seu próprio Google Drive.", "Fechar", null);
@@ -808,10 +837,10 @@
   // ============================================================
   let suppressPush = false;
   const Sync = {
-    async connect() {
+    async connect(options) {
       try {
         this.setStatus("syncing");
-        await D.connect();
+        await D.connect(options || {});
         this.setStatus("on");
         toast("Google Drive conectado ✨");
         await this.full();
@@ -863,8 +892,7 @@
     },
   };
   $("#sync").addEventListener("click", () => {
-    if (!D.available()) return connectModal();
-    if (D.isConnected()) Sync.full(true); else Sync.connect();
+    syncModal();
   });
   window.addEventListener("faisca:drive-state", (event) => {
     Sync.setStatus(event.detail && event.detail.connected ? "on" : "off");

@@ -52,20 +52,20 @@
     gisReady = true;
   }
 
-  function requestToken(interactive) {
+  function requestToken(interactive, selectAccount) {
     return new Promise((resolve, reject) => {
       pendingResolve = resolve; pendingReject = reject;
       try {
-        tokenClient.requestAccessToken({ prompt: interactive ? "consent" : "" });
+        tokenClient.requestAccessToken({ prompt: interactive ? (selectAccount ? "select_account consent" : "consent") : "" });
       } catch (e) { pendingResolve = pendingReject = null; reject(e); }
     });
   }
 
-  async function ensureToken(interactive) {
+  async function ensureToken(interactive, selectAccount) {
     await initClient();
     if (accessToken && Date.now() < tokenExpiry) return accessToken;
     if (!interactive) throw new Error("Login necessario para sincronizar.");
-    return requestToken(!!interactive);
+    return requestToken(!!interactive, !!selectAccount);
   }
 
   function acceptToken(resp) {
@@ -178,11 +178,12 @@
     wasConnected: () => localStorage.getItem(LS_FLAG) === "1",
     user: () => localStorage.getItem(LS_USER) || "",
 
-    async connect() {
+    async connect(options = {}) {
       if (window.FaiscaDesktopOAuth && CFG.GOOGLE_DESKTOP_CLIENT_ID && CFG.GOOGLE_DESKTOP_CLIENT_ID.trim()) {
         const resp = await window.FaiscaDesktopOAuth.connect({
           clientId: CFG.GOOGLE_DESKTOP_CLIENT_ID.trim(),
           scope: CFG.DRIVE_SCOPE,
+          selectAccount: !!options.selectAccount,
         });
         if (!acceptToken(resp)) throw new Error("AutorizaÃ§Ã£o nÃ£o concluÃ­da.");
         const email = await fetchUserEmail();
@@ -190,7 +191,7 @@
         return email;
       }
       await initClient();
-      await ensureToken(true);
+      await ensureToken(true, !!options.selectAccount);
       const email = await fetchUserEmail();
       if (email) localStorage.setItem(LS_USER, email);
       return email;

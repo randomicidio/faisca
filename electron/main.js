@@ -50,7 +50,7 @@ function base64url(buf) {
   return Buffer.from(buf).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
-async function desktopOAuth({ clientId, scope }, sender) {
+async function desktopOAuth({ clientId, scope, selectAccount }, sender) {
   const verifier = base64url(crypto.randomBytes(64));
   const challenge = base64url(crypto.createHash("sha256").update(verifier).digest());
   const state = base64url(crypto.randomBytes(18));
@@ -156,7 +156,7 @@ async function desktopOAuth({ clientId, scope }, sender) {
       authUrl.searchParams.set("response_type", "code");
       authUrl.searchParams.set("scope", scope);
       authUrl.searchParams.set("access_type", "online");
-      authUrl.searchParams.set("prompt", "consent");
+      authUrl.searchParams.set("prompt", selectAccount ? "select_account consent" : "consent");
       authUrl.searchParams.set("code_challenge", challenge);
       authUrl.searchParams.set("code_challenge_method", "S256");
       authUrl.searchParams.set("state", state);
