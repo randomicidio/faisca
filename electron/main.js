@@ -1,9 +1,18 @@
 const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const crypto = require("crypto");
+const fs = require("fs");
 const http = require("http");
 const path = require("path");
 
 const APP_URL = "https://randomicidio.github.io/faisca/";
+
+function loadLocalSecrets() {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(__dirname, "secrets.local.json"), "utf8"));
+  } catch (e) {
+    return {};
+  }
+}
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -82,9 +91,9 @@ async function desktopOAuth({ clientId, scope }) {
     h1 { margin: 0 0 8px; font-size: 24px; line-height: 1.15; }
     p { margin: 0; color: var(--dim); font-size: 15px; line-height: 1.55; }
     .hint { margin-top: 18px; font-size: 13px; }
-    button {
+    .note {
       margin-top: 22px; border: 0; border-radius: 12px; padding: 12px 16px; min-width: 160px;
-      color: #fff; font-weight: 750; font-size: 14px; cursor: pointer;
+      display: inline-block; color: #fff; font-weight: 750; font-size: 14px;
       background: linear-gradient(135deg, var(--accent2), var(--accent));
     }
   </style>
@@ -94,10 +103,9 @@ async function desktopOAuth({ clientId, scope }) {
     <div class="mark">ϟ</div>
     <h1>Faísca conectado</h1>
     <p>Seu Google Drive foi conectado com sucesso. Você já pode voltar para o aplicativo.</p>
-    <p class="hint">Esta aba pode ser fechada.</p>
-    <button onclick="window.close()">Fechar aba</button>
+    <p class="hint">VocÃª pode fechar esta aba manualmente.</p>
+    <span class="note">Volte para o FaÃ­sca</span>
   </main>
-  <script>setTimeout(() => window.close(), 3500);</script>
 </body>
 </html>`);
         server.close();
@@ -109,6 +117,8 @@ async function desktopOAuth({ clientId, scope }) {
           grant_type: "authorization_code",
           redirect_uri: redirectUri,
         });
+        const secret = loadLocalSecrets().googleDesktopClientSecret;
+        if (secret) body.set("client_secret", secret);
         const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },

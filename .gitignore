@@ -1,4 +1,5 @@
 node_modules/
 dist/
 dist-packager/
+electron/secrets.local.json
 npm-debug.log*
