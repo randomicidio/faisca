@@ -853,6 +853,7 @@
       if (s === "on") { pill.classList.add("is-on"); label.textContent = "Sincronizado"; }
       else if (s === "syncing") { pill.classList.add("is-syncing"); label.textContent = "Sincronizando"; }
       else if (s === "error") { pill.classList.add("is-error"); label.textContent = "Erro"; }
+      else if (s === "ready") { label.textContent = "Sincronizar"; }
       else if (s === "off") { label.textContent = D.available() ? "Conectar" : "Local"; }
       else { label.textContent = "Local"; }
     },
@@ -916,7 +917,7 @@
     if (M) { try { await M.init(); await migrateOldMedia(); } catch (e) {} }
     renderBoard();
     if (D.available()) {
-      Sync.setStatus("off");
+      Sync.setStatus(D.isConnected() ? "on" : (D.wasConnected() ? "ready" : "off"));
     } else Sync.setStatus("local");
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("./service-worker.js").catch(() => {});
   }
