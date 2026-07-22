@@ -853,7 +853,7 @@
       if (s === "on") { pill.classList.add("is-on"); label.textContent = "Sincronizado"; }
       else if (s === "syncing") { pill.classList.add("is-syncing"); label.textContent = "Sincronizando"; }
       else if (s === "error") { pill.classList.add("is-error"); label.textContent = "Erro"; }
-      else if (s === "ready") { label.textContent = "Sincronizar"; }
+      else if (s === "ready") { pill.classList.add("is-on"); label.textContent = "Drive ligado"; }
       else if (s === "off") { label.textContent = D.available() ? "Conectar" : "Local"; }
       else { label.textContent = "Local"; }
     },
@@ -862,6 +862,7 @@
     if (!D.available()) return connectModal();
     if (D.isConnected()) Sync.full(true); else Sync.connect();
   });
+  window.addEventListener("faisca:drive-token", () => Sync.setStatus("on"));
 
   // ---------- subscription ----------
   S.subscribe(() => { if (!boardFrozen) renderBoard(); Sync.pushSoon(); });

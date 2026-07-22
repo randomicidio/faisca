@@ -76,6 +76,7 @@
     accessToken = resp.access_token;
     tokenExpiry = Date.now() + (resp.expires_in ? resp.expires_in * 1000 : 3600 * 1000) - 60000;
     localStorage.setItem(LS_FLAG, "1");
+    window.dispatchEvent(new CustomEvent("faisca:drive-token"));
     return true;
   }
 

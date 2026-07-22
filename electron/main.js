@@ -14,7 +14,7 @@ function loadLocalSecrets() {
   }
 }
 
-function createWindow() {
+async function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 820,
@@ -32,6 +32,9 @@ function createWindow() {
     },
   });
 
+  await win.webContents.session.clearStorageData({
+    storages: ["serviceworkers", "cachestorage"],
+  }).catch(() => {});
   win.loadURL(APP_URL);
 
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -66,7 +69,7 @@ async function desktopOAuth({ clientId, scope }) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Faísca conectado</title>
+  <title>Fa&iacute;sca conectado</title>
   <style>
     :root { color-scheme: light dark; --accent:#e8452a; --accent2:#ff7a42; --bg:#f3f1ec; --text:#1d1a16; --dim:#6a6357; --card:#fff; --border:#e6e0d5; }
     @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --text:#f1eee8; --dim:#a49c96; --card:#201e26; --border:#302d38; } }
@@ -100,11 +103,11 @@ async function desktopOAuth({ clientId, scope }) {
 </head>
 <body>
   <main class="card">
-    <div class="mark">ϟ</div>
-    <h1>Faísca conectado</h1>
-    <p>Seu Google Drive foi conectado com sucesso. Você já pode voltar para o aplicativo.</p>
-    <p class="hint">VocÃª pode fechar esta aba manualmente.</p>
-    <span class="note">Volte para o FaÃ­sca</span>
+    <div class="mark">&#9889;</div>
+    <h1>Fa&iacute;sca conectado</h1>
+    <p>Seu Google Drive foi conectado com sucesso. Voc&ecirc; j&aacute; pode voltar para o aplicativo.</p>
+    <p class="hint">Voc&ecirc; pode fechar esta aba manualmente.</p>
+    <span class="note">Volte para o Fa&iacute;sca</span>
   </main>
 </body>
 </html>`);
