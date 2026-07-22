@@ -14,7 +14,7 @@ window.FAISCA_CONFIG = {
 
   // Opcional: Client ID do tipo "Aplicativo para computador" para o .exe.
   // Quando preenchido, o app desktop abre o login no navegador padrão.
-  GOOGLE_DESKTOP_CLIENT_ID: "",
+  GOOGLE_DESKTOP_CLIENT_ID: "1060218621029-7jlo1rpo6jm77kae9aurm2up3e4ffjpd.apps.googleusercontent.com",
 
   // Nome do arquivo que guarda seus dados no Drive de cada pessoa.
   // Não precisa mudar.
