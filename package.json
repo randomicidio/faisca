@@ -1,0 +1,29 @@
+{
+  "name": "faisca-desktop",
+  "version": "1.0.0",
+  "description": "Faísca desktop app",
+  "private": true,
+  "main": "electron/main.js",
+  "scripts": {
+    "desktop": "electron .",
+    "build:win": "electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.dincontent.faisca",
+    "productName": "Faísca",
+    "files": [
+      "electron/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "icons/icon-512.png"
+    }
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  }
+}
