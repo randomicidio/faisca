@@ -50,7 +50,7 @@ function base64url(buf) {
   return Buffer.from(buf).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
-async function desktopOAuth({ clientId, scope }) {
+async function desktopOAuth({ clientId, scope }, sender) {
   const verifier = base64url(crypto.randomBytes(64));
   const challenge = base64url(crypto.createHash("sha256").update(verifier).digest());
   const state = base64url(crypto.randomBytes(18));
@@ -124,6 +124,7 @@ async function desktopOAuth({ clientId, scope }) {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body,
+          signal: AbortSignal.timeout(15000),
         });
         const tokenJson = await tokenRes.json().catch(() => ({}));
         if (!tokenRes.ok) {
@@ -135,6 +136,11 @@ async function desktopOAuth({ clientId, scope }) {
         server.close();
         resolve(tokenJson);
       } catch (err) {
+        if (!res.headersSent) {
+          const message = String(err && err.message ? err.message : "Falha ao concluir login.");
+          res.writeHead(500, { "Content-Type": "text/html; charset=utf-8" });
+          res.end(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Falha no login</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#16151a;color:#f1eee8;font:16px system-ui;padding:24px}.box{max-width:520px;padding:28px;background:#201e26;border:1px solid #393540;border-radius:12px}h1{font-size:22px;margin:0 0 12px;color:#ff6847}p{line-height:1.55;color:#c2bac2;overflow-wrap:anywhere}</style></head><body><main class="box"><h1>N&atilde;o foi poss&iacute;vel conectar</h1><p>${message.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]))}</p><p>Volte ao Fa&iacute;sca e tente novamente.</p></main></body></html>`);
+        }
         try { server.close(); } catch (e) {}
         reject(err);
       }
@@ -165,7 +171,16 @@ async function desktopOAuth({ clientId, scope }) {
   });
 }
 
-ipcMain.handle("oauth:connect", (_event, args) => desktopOAuth(args));
+ipcMain.handle("oauth:connect", async (event, args) => {
+  try {
+    const result = await desktopOAuth(args, event.sender);
+    if (!event.sender.isDestroyed()) event.sender.send("oauth:result", { ok: true, token: result });
+    return result;
+  } catch (error) {
+    if (!event.sender.isDestroyed()) event.sender.send("oauth:result", { ok: false, message: error.message });
+    throw error;
+  }
+});
 
 app.whenReady().then(createWindow);
 

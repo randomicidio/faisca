@@ -869,6 +869,10 @@
   window.addEventListener("faisca:drive-state", (event) => {
     Sync.setStatus(event.detail && event.detail.connected ? "on" : "off");
   });
+  window.addEventListener("faisca:drive-desktop-result", (event) => {
+    if (event.detail && event.detail.ok) Sync.setStatus("on");
+    else if (event.detail) { Sync.setStatus("off"); toast(event.detail.message, true); }
+  });
   window.addEventListener("storage", (event) => {
     if (event.key === "faisca:drive:connected") Sync.setStatus(event.newValue === "1" ? "ready" : "off");
   });

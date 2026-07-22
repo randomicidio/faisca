@@ -1,5 +1,5 @@
 // Faísca — service worker (funciona offline)
-const CACHE = "faisca-v21";
+const CACHE = "faisca-v22";
 const ASSETS = [
   "./",
   "./index.html",

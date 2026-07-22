@@ -77,6 +77,18 @@
     return true;
   }
 
+  if (window.FaiscaDesktopOAuth && window.FaiscaDesktopOAuth.onResult) {
+    window.FaiscaDesktopOAuth.onResult((result) => {
+      if (result && result.ok && acceptToken(result.token)) {
+        window.dispatchEvent(new CustomEvent("faisca:drive-desktop-result", { detail: { ok: true } }));
+      } else if (result && !result.ok) {
+        window.dispatchEvent(new CustomEvent("faisca:drive-desktop-result", {
+          detail: { ok: false, message: result.message || "Falha ao conectar com o Google." },
+        }));
+      }
+    });
+  }
+
   async function api(url, opts = {}) {
     const token = await ensureToken(false);
     opts.headers = Object.assign({ Authorization: "Bearer " + token }, opts.headers || {});
