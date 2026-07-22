@@ -809,11 +809,17 @@
   let suppressPush = false;
   const Sync = {
     async connect() {
-      try { this.setStatus("syncing"); await D.connect(); await this.full(); toast("Google Drive conectado ✨"); }
+      try {
+        this.setStatus("syncing");
+        await D.connect();
+        this.setStatus("on");
+        toast("Google Drive conectado ✨");
+        await this.full();
+      }
       catch (e) { this.setStatus(D.wasConnected() ? "on" : "off"); toast(e && e.message ? e.message : "Não deu pra conectar", true); }
     },
     async full(manual) {
-      if (!D.isConnected()) { if (manual) toast("Conecte o Drive primeiro", true); return; }
+      if (!D.isConnected()) { if (manual) toast("Conecte o Drive primeiro", true); return false; }
       try {
         this.setStatus("syncing");
         const remote = await D.pull();
@@ -821,7 +827,8 @@
         await D.push(S.exportObject());
         this.setStatus("on"); if (manual) toast("Sincronizado ✨");
         syncPendingMedia().catch(() => {});
-      } catch (e) { suppressPush = false; this.setStatus("error"); toast("Falha ao sincronizar", true); }
+        return true;
+      } catch (e) { suppressPush = false; this.setStatus("error"); toast("Falha ao sincronizar", true); return false; }
     },
     _push: debounce(async function () {
       if (!D.isConnected()) return;
