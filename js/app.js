@@ -834,6 +834,21 @@
       try { this.setStatus("syncing"); const r = await D.pull(); if (r) { suppressPush = true; S.importObject(r); suppressPush = false; } this.setStatus("on"); }
       catch (e) { suppressPush = false; this.setStatus(D.isConnected() ? "on" : "off"); }
     },
+    async ensureReady(manual) {
+      if (D.isConnected()) return true;
+      if (!D.wasConnected()) {
+        if (manual) toast("Conecte o Drive primeiro", true);
+        return false;
+      }
+      try {
+        this.setStatus("syncing");
+        const ok = await D.reconnectSilently();
+        if (ok) return true;
+      } catch (e) {}
+      this.setStatus("off");
+      if (manual) toast("NÃ£o consegui checar o Drive sem login. Use Conectar se precisar.", true);
+      return false;
+    },
     setStatus(s) {
       const pill = $("#sync"); const label = $("#syncLabel");
       pill.classList.remove("is-on", "is-syncing", "is-error");
@@ -853,14 +868,17 @@
   S.subscribe(() => { if (!boardFrozen) renderBoard(); Sync.pushSoon(); });
 
   let lastPull = 0;
-  function maybePull() { if (!D.isConnected()) return; if (Date.now() - lastPull < 8000) return; lastPull = Date.now(); Sync.pull(); }
+  async function maybePull() {
+    if (Date.now() - lastPull < 8000) return;
+    if (!(await Sync.ensureReady(false))) return;
+    lastPull = Date.now();
+    Sync.pull();
+  }
   async function refreshNow(manual) {
-    if (D.isConnected()) {
-      lastPull = Date.now();
-      await Sync.full(manual);
-    } else if (manual) {
-      location.reload();
-    }
+    if (!(await Sync.ensureReady(manual))) return;
+    lastPull = Date.now();
+    await Sync.pull();
+    if (manual) toast("Atualizado");
   }
   window.addEventListener("focus", maybePull);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) maybePull(); });
