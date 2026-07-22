@@ -12,6 +12,10 @@ window.FAISCA_CONFIG = {
   // Cole aqui o seu Client ID (termina em .apps.googleusercontent.com)
   GOOGLE_CLIENT_ID: "1060218621029-94iml7nmubbv0mdeos1qeqs2js49pfqp.apps.googleusercontent.com",
 
+  // Opcional: Client ID do tipo "Aplicativo para computador" para o .exe.
+  // Quando preenchido, o app desktop abre o login no navegador padrão.
+  GOOGLE_DESKTOP_CLIENT_ID: "",
+
   // Nome do arquivo que guarda seus dados no Drive de cada pessoa.
   // Não precisa mudar.
   DRIVE_FILE_NAME: "faisca-dados.json",

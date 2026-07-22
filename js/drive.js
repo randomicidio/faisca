@@ -71,6 +71,14 @@
     return requestToken(!!interactive);
   }
 
+  function acceptToken(resp) {
+    if (!resp || !resp.access_token) return false;
+    accessToken = resp.access_token;
+    tokenExpiry = Date.now() + (resp.expires_in ? resp.expires_in * 1000 : 3600 * 1000) - 60000;
+    localStorage.setItem(LS_FLAG, "1");
+    return true;
+  }
+
   async function api(url, opts = {}) {
     const token = await ensureToken(false);
     opts.headers = Object.assign({ Authorization: "Bearer " + token }, opts.headers || {});
@@ -161,6 +169,16 @@
     user: () => localStorage.getItem(LS_USER) || "",
 
     async connect() {
+      if (window.FaiscaDesktopOAuth && CFG.GOOGLE_DESKTOP_CLIENT_ID && CFG.GOOGLE_DESKTOP_CLIENT_ID.trim()) {
+        const resp = await window.FaiscaDesktopOAuth.connect({
+          clientId: CFG.GOOGLE_DESKTOP_CLIENT_ID.trim(),
+          scope: CFG.DRIVE_SCOPE,
+        });
+        if (!acceptToken(resp)) throw new Error("AutorizaÃ§Ã£o nÃ£o concluÃ­da.");
+        const email = await fetchUserEmail();
+        if (email) localStorage.setItem(LS_USER, email);
+        return email;
+      }
       await initClient();
       await ensureToken(true);
       const email = await fetchUserEmail();
