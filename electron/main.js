@@ -52,7 +52,54 @@ async function desktopOAuth({ clientId, scope }) {
         const code = url.searchParams.get("code");
         if (!code) throw new Error("AutorizaÃ§Ã£o nÃ£o concluÃ­da.");
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-        res.end("<h2>FaÃ­sca conectado.</h2><p>VocÃª jÃ¡ pode voltar para o aplicativo.</p>");
+        res.end(`<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Faísca conectado</title>
+  <style>
+    :root { color-scheme: light dark; --accent:#e8452a; --accent2:#ff7a42; --bg:#f3f1ec; --text:#1d1a16; --dim:#6a6357; --card:#fff; --border:#e6e0d5; }
+    @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --text:#f1eee8; --dim:#a49c96; --card:#201e26; --border:#302d38; } }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--text);
+      background: radial-gradient(900px 420px at 70% -10%, rgba(255,122,66,.18), transparent 60%), var(--bg);
+    }
+    .card {
+      width: min(420px, 100%); padding: 28px; border-radius: 18px; background: var(--card);
+      border: 1px solid var(--border); box-shadow: 0 18px 50px rgba(50,25,10,.16), 0 4px 14px rgba(60,35,15,.08);
+      text-align: center;
+    }
+    .mark {
+      width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 16px;
+      display: grid; place-items: center; color: #fff; font-size: 34px; font-weight: 900;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      box-shadow: 0 10px 24px rgba(232,69,42,.28);
+    }
+    h1 { margin: 0 0 8px; font-size: 24px; line-height: 1.15; }
+    p { margin: 0; color: var(--dim); font-size: 15px; line-height: 1.55; }
+    .hint { margin-top: 18px; font-size: 13px; }
+    button {
+      margin-top: 22px; border: 0; border-radius: 12px; padding: 12px 16px; min-width: 160px;
+      color: #fff; font-weight: 750; font-size: 14px; cursor: pointer;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="mark">ϟ</div>
+    <h1>Faísca conectado</h1>
+    <p>Seu Google Drive foi conectado com sucesso. Você já pode voltar para o aplicativo.</p>
+    <p class="hint">Esta aba pode ser fechada.</p>
+    <button onclick="window.close()">Fechar aba</button>
+  </main>
+  <script>setTimeout(() => window.close(), 3500);</script>
+</body>
+</html>`);
         server.close();
 
         const body = new URLSearchParams({
