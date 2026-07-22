@@ -856,6 +856,9 @@
   function maybePull() { if (!D.isConnected()) return; if (Date.now() - lastPull < 8000) return; lastPull = Date.now(); Sync.pull(); }
   window.addEventListener("focus", maybePull);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) maybePull(); });
+  setInterval(() => {
+    if (!document.hidden) maybePull();
+  }, 20000);
 
   // ============================================================
   //  Boot
