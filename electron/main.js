@@ -114,8 +114,12 @@ async function desktopOAuth({ clientId, scope }) {
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body,
         });
-        if (!tokenRes.ok) throw new Error("Falha ao concluir login no Google.");
-        resolve(await tokenRes.json());
+        const tokenJson = await tokenRes.json().catch(() => ({}));
+        if (!tokenRes.ok) {
+          const detail = tokenJson.error_description || tokenJson.error || "Falha ao concluir login no Google.";
+          throw new Error(detail);
+        }
+        resolve(tokenJson);
       } catch (err) {
         try { server.close(); } catch (e) {}
         reject(err);
