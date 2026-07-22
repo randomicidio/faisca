@@ -424,7 +424,8 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 
 /* modal center (for connect + confirm) */
 .modal-center { position: fixed; inset: 0; z-index: 61; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.modal-card { background: var(--bg); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow-lg); width: 100%; max-width: 440px; padding: 24px; animation: popIn .22s cubic-bezier(.2,.8,.3,1) both; }
+.modal-center > .scrim { z-index: 0; }
+.modal-card { position: relative; z-index: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow-lg); width: 100%; max-width: 440px; padding: 24px; animation: popIn .22s cubic-bezier(.2,.8,.3,1) both; }
 @keyframes popIn { from { opacity: 0; transform: scale(.96) translateY(8px); } }
 .modal-card h3 { margin: 0 0 8px; font-size: 19px; font-weight: 750; letter-spacing: -.01em; }
 .modal-card .row-btns { display: flex; gap: 10px; margin-top: 18px; }
