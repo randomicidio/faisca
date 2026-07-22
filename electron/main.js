@@ -14,6 +14,51 @@ function loadLocalSecrets() {
   }
 }
 
+function tokenFilePath() {
+  return path.join(app.getPath("userData"), "google-drive-session.json");
+}
+
+function loadDesktopSession() {
+  try { return JSON.parse(fs.readFileSync(tokenFilePath(), "utf8")); }
+  catch (e) { return {}; }
+}
+
+function saveDesktopSession(tokens, clientId) {
+  const previous = loadDesktopSession();
+  const session = {
+    clientId,
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token || previous.refresh_token || null,
+    expires_at: Date.now() + (Number(tokens.expires_in) || 3600) * 1000 - 60000,
+  };
+  fs.writeFileSync(tokenFilePath(), JSON.stringify(session), { encoding: "utf8", mode: 0o600 });
+  return session;
+}
+
+function clearDesktopSession() {
+  try { fs.unlinkSync(tokenFilePath()); } catch (e) {}
+}
+
+async function restoreDesktopSession(clientId) {
+  const session = loadDesktopSession();
+  if (!session.access_token || session.clientId !== clientId) return null;
+  if (Date.now() < Number(session.expires_at || 0)) {
+    return { access_token: session.access_token, expires_in: Math.max(60, Math.floor((session.expires_at - Date.now()) / 1000) + 60) };
+  }
+  if (!session.refresh_token) return null;
+  const body = new URLSearchParams({ client_id: clientId, refresh_token: session.refresh_token, grant_type: "refresh_token" });
+  const secret = loadLocalSecrets().googleDesktopClientSecret;
+  if (secret) body.set("client_secret", secret);
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body,
+    signal: AbortSignal.timeout(15000),
+  });
+  const tokens = await response.json().catch(() => ({}));
+  if (!response.ok || !tokens.access_token) { clearDesktopSession(); return null; }
+  saveDesktopSession(tokens, clientId);
+  return tokens;
+}
+
 async function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
@@ -131,6 +176,7 @@ async function desktopOAuth({ clientId, scope, selectAccount }, sender) {
           const detail = tokenJson.error_description || tokenJson.error || "Falha ao concluir login no Google.";
           throw new Error(detail);
         }
+        saveDesktopSession(tokenJson, clientId);
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
         res.end(successPage);
         server.close();
@@ -155,7 +201,7 @@ async function desktopOAuth({ clientId, scope, selectAccount }, sender) {
       authUrl.searchParams.set("redirect_uri", redirectUri);
       authUrl.searchParams.set("response_type", "code");
       authUrl.searchParams.set("scope", scope);
-      authUrl.searchParams.set("access_type", "online");
+      authUrl.searchParams.set("access_type", "offline");
       authUrl.searchParams.set("prompt", selectAccount ? "select_account consent" : "consent");
       authUrl.searchParams.set("code_challenge", challenge);
       authUrl.searchParams.set("code_challenge_method", "S256");
@@ -181,6 +227,9 @@ ipcMain.handle("oauth:connect", async (event, args) => {
     throw error;
   }
 });
+
+ipcMain.handle("oauth:restore", (_event, { clientId }) => restoreDesktopSession(clientId));
+ipcMain.handle("oauth:disconnect", () => { clearDesktopSession(); return true; });
 
 app.whenReady().then(createWindow);
 

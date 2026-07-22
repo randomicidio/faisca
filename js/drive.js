@@ -208,8 +208,15 @@
     },
 
     async reconnectSilently() {
-      if (!available() || !this.wasConnected()) return false;
-      try { return this.isConnected(); }
+      if (!available()) return false;
+      try {
+        if (this.isConnected()) return true;
+        if (window.FaiscaDesktopOAuth && window.FaiscaDesktopOAuth.restore && CFG.GOOGLE_DESKTOP_CLIENT_ID) {
+          const restored = await window.FaiscaDesktopOAuth.restore({ clientId: CFG.GOOGLE_DESKTOP_CLIENT_ID.trim() });
+          return acceptToken(restored);
+        }
+        return false;
+      }
       catch (e) { return false; }
     },
 
@@ -222,6 +229,7 @@
       localStorage.removeItem(LS_FILE);
       localStorage.removeItem(LS_USER);
       localStorage.removeItem(LS_APP_FOLDER);
+      if (window.FaiscaDesktopOAuth && window.FaiscaDesktopOAuth.disconnect) window.FaiscaDesktopOAuth.disconnect().catch(() => {});
       window.dispatchEvent(new CustomEvent("faisca:drive-state", { detail: { connected: false } }));
     },
 

@@ -694,7 +694,7 @@
     const host = document.createElement("div");
     host.className = "modal-center";
     const configured = D.available();
-    const linked = D.wasConnected();
+    const linked = D.isConnected();
     const active = D.isConnected();
     const account = D.user();
     host.innerHTML = `
@@ -879,6 +879,7 @@
     },
     async ensureReady(manual) {
       if (D.isConnected()) return true;
+      if (await D.reconnectSilently()) { this.setStatus("on"); return true; }
       this.setStatus("off");
       if (manual) toast("Conecte o Drive para sincronizar", true);
       return false;
@@ -891,10 +892,7 @@
       else if (s === "syncing") { pill.classList.add("is-syncing"); label.textContent = "Sincronizando"; }
       else if (s === "error") { pill.classList.add("is-error"); label.textContent = "Erro"; }
       else if (s === "ready") { pill.classList.add("is-on"); label.textContent = "Drive ligado"; }
-      else if (s === "off") {
-        if (D.wasConnected()) { pill.classList.add("is-on"); label.textContent = "Drive ligado"; }
-        else label.textContent = D.available() ? "Conectar" : "Local";
-      }
+      else if (s === "off") { label.textContent = D.available() ? "Conectar" : "Local"; }
       else { label.textContent = "Local"; }
     },
   };
@@ -966,10 +964,12 @@
     if (M) { try { await M.init(); await migrateOldMedia(); } catch (e) {} }
     renderBoard();
     if (D.available()) {
-      Sync.setStatus(D.isConnected() ? "on" : (D.wasConnected() ? "ready" : "off"));
+      const restored = await D.reconnectSilently();
+      Sync.setStatus(restored ? "on" : "off");
+      if (restored) Sync.pull();
     } else Sync.setStatus("local");
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("./service-worker.js").catch(() => {});
-    document.documentElement.dataset.appVersion = "21";
+    document.documentElement.dataset.appVersion = "27";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
