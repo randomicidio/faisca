@@ -836,17 +836,8 @@
     },
     async ensureReady(manual) {
       if (D.isConnected()) return true;
-      if (!D.wasConnected()) {
-        if (manual) toast("Conecte o Drive primeiro", true);
-        return false;
-      }
-      try {
-        this.setStatus("syncing");
-        const ok = await D.reconnectSilently();
-        if (ok) return true;
-      } catch (e) {}
       this.setStatus("off");
-      if (manual) toast("NÃ£o consegui checar o Drive sem login. Use Conectar se precisar.", true);
+      if (manual) toast("Conecte o Drive para sincronizar", true);
       return false;
     },
     setStatus(s) {
@@ -919,8 +910,6 @@
     renderBoard();
     if (D.available()) {
       Sync.setStatus("off");
-      const ok = await D.reconnectSilently();
-      if (ok) { Sync.setStatus("on"); Sync.full(); }
     } else Sync.setStatus("local");
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("./service-worker.js").catch(() => {});
   }
