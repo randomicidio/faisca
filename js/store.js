@@ -178,7 +178,9 @@
     for (const t of remote.tombstones) tomb.set(t.id, Math.max(tomb.get(t.id) || 0, t.deleted || 0));
     for (const [id, delTs] of tomb) {
       const item = byId.get(id);
-      if (item && delTs > (item.updated || 0)) byId.delete(id);
+      // Exclusao vence qualquer copia antiga do mesmo item, mesmo se os
+      // relogios dos aparelhos estiverem com horarios diferentes.
+      if (item) byId.delete(id);
     }
     state.ideas = Array.from(byId.values()).sort((a, b) => (b.updated || 0) - (a.updated || 0)).map(normalizeIdea);
     state.tombstones = Array.from(tomb, ([id, deleted]) => ({ id, deleted }));

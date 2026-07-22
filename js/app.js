@@ -503,6 +503,7 @@
       if (D.isConnected() && idea.driveFolderId) D.trash(idea.driveFolderId).catch(() => {});
     }
     S.deleteIdea(id);
+    if (D.isConnected()) await Sync.full(false);
   }
 
   async function renderMediaList(id) {
@@ -861,8 +862,14 @@
     },
     _push: debounce(async function () {
       if (!D.isConnected()) return;
-      try { Sync.setStatus("syncing"); await D.push(S.exportObject()); Sync.setStatus("on"); }
-      catch (e) { Sync.setStatus("error"); }
+      try {
+        Sync.setStatus("syncing");
+        const remote = await D.pull();
+        if (remote) { suppressPush = true; S.importObject(remote); suppressPush = false; }
+        await D.push(S.exportObject());
+        Sync.setStatus("on");
+      }
+      catch (e) { suppressPush = false; Sync.setStatus("error"); }
     }, 1600),
     pushSoon() { if (D.isConnected() && !suppressPush) this._push(); },
     async pull() {
