@@ -6,7 +6,8 @@
   "main": "electron/main.js",
   "scripts": {
     "desktop": "electron .",
-    "build:win": "electron-builder --win portable"
+    "build:win": "electron-builder --win portable",
+    "build:win-folder": "electron-packager . \"Faísca\" --platform=win32 --arch=x64 --out=dist-packager --overwrite --icon=icons/faisca.ico --prune=true --ignore=\"^/dist($|/)\" --ignore=\"^/dist-packager($|/)\" --ignore=\"^/.git($|/)\""
   },
   "build": {
     "appId": "com.dincontent.faisca",
@@ -24,6 +25,7 @@
     }
   },
   "devDependencies": {
+    "@electron/packager": "^20.0.4",
     "electron": "^31.7.7",
     "electron-builder": "^24.13.3"
   }
