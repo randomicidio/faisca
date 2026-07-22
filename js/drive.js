@@ -9,10 +9,18 @@
   const LS_FLAG = "faisca:drive:connected";
   const LS_USER = "faisca:drive:user";
   const LS_APP_FOLDER = "faisca:drive:appFolderId";
+  const LS_TOKEN = "faisca:drive:accessToken";
+  const LS_TOKEN_EXPIRY = "faisca:drive:tokenExpiry";
 
   let tokenClient = null;
-  let accessToken = null;
-  let tokenExpiry = 0;
+  let accessToken = localStorage.getItem(LS_TOKEN) || null;
+  let tokenExpiry = Number(localStorage.getItem(LS_TOKEN_EXPIRY)) || 0;
+  if (!accessToken || Date.now() >= tokenExpiry) {
+    accessToken = null;
+    tokenExpiry = 0;
+    localStorage.removeItem(LS_TOKEN);
+    localStorage.removeItem(LS_TOKEN_EXPIRY);
+  }
   let pendingResolve = null;
   let pendingReject = null;
   let gisReady = false;
@@ -73,6 +81,8 @@
     accessToken = resp.access_token;
     tokenExpiry = Date.now() + (resp.expires_in ? resp.expires_in * 1000 : 3600 * 1000) - 60000;
     localStorage.setItem(LS_FLAG, "1");
+    localStorage.setItem(LS_TOKEN, accessToken);
+    localStorage.setItem(LS_TOKEN_EXPIRY, String(tokenExpiry));
     window.dispatchEvent(new CustomEvent("faisca:drive-state", { detail: { connected: true } }));
     return true;
   }
@@ -94,11 +104,11 @@
     opts.headers = Object.assign({ Authorization: "Bearer " + token }, opts.headers || {});
     let res = await fetch(url, opts);
     if (res.status === 401) {
-      // token expirou — pede de novo (silencioso) e repete
+      // A autorizacao deixou de ser valida; o proximo comando permite reconectar.
       accessToken = null;
-      const t2 = await ensureToken(false);
-      opts.headers.Authorization = "Bearer " + t2;
-      res = await fetch(url, opts);
+      tokenExpiry = 0;
+      localStorage.removeItem(LS_TOKEN);
+      localStorage.removeItem(LS_TOKEN_EXPIRY);
     }
     return res;
   }
@@ -206,6 +216,8 @@
     disconnect() {
       try { if (accessToken && window.google) google.accounts.oauth2.revoke(accessToken, () => {}); } catch (e) {}
       accessToken = null; tokenExpiry = 0;
+      localStorage.removeItem(LS_TOKEN);
+      localStorage.removeItem(LS_TOKEN_EXPIRY);
       localStorage.removeItem(LS_FLAG);
       localStorage.removeItem(LS_FILE);
       localStorage.removeItem(LS_USER);
