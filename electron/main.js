@@ -63,8 +63,7 @@ async function desktopOAuth({ clientId, scope }) {
         if (url.searchParams.get("state") !== state) throw new Error("Estado OAuth invÃ¡lido.");
         const code = url.searchParams.get("code");
         if (!code) throw new Error("AutorizaÃ§Ã£o nÃ£o concluÃ­da.");
-        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-        res.end(`<!doctype html>
+        const successPage = `<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
@@ -110,8 +109,7 @@ async function desktopOAuth({ clientId, scope }) {
     <span class="note">Volte para o Fa&iacute;sca</span>
   </main>
 </body>
-</html>`);
-        server.close();
+</html>`;
 
         const body = new URLSearchParams({
           client_id: clientId,
@@ -132,6 +130,9 @@ async function desktopOAuth({ clientId, scope }) {
           const detail = tokenJson.error_description || tokenJson.error || "Falha ao concluir login no Google.";
           throw new Error(detail);
         }
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        res.end(successPage);
+        server.close();
         resolve(tokenJson);
       } catch (err) {
         try { server.close(); } catch (e) {}

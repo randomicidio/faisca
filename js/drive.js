@@ -37,10 +37,7 @@
       client_id: CFG.GOOGLE_CLIENT_ID.trim(),
       scope: CFG.DRIVE_SCOPE,
       callback: (resp) => {
-        if (resp && resp.access_token) {
-          accessToken = resp.access_token;
-          tokenExpiry = Date.now() + (resp.expires_in ? resp.expires_in * 1000 : 3600 * 1000) - 60000;
-          localStorage.setItem(LS_FLAG, "1");
+        if (acceptToken(resp)) {
           if (pendingResolve) pendingResolve(accessToken);
         } else if (pendingReject) {
           pendingReject(new Error("Autorização não concluída."));
@@ -76,7 +73,7 @@
     accessToken = resp.access_token;
     tokenExpiry = Date.now() + (resp.expires_in ? resp.expires_in * 1000 : 3600 * 1000) - 60000;
     localStorage.setItem(LS_FLAG, "1");
-    window.dispatchEvent(new CustomEvent("faisca:drive-token"));
+    window.dispatchEvent(new CustomEvent("faisca:drive-state", { detail: { connected: true } }));
     return true;
   }
 
@@ -200,6 +197,7 @@
       localStorage.removeItem(LS_FILE);
       localStorage.removeItem(LS_USER);
       localStorage.removeItem(LS_APP_FOLDER);
+      window.dispatchEvent(new CustomEvent("faisca:drive-state", { detail: { connected: false } }));
     },
 
     // Lê o objeto salvo no Drive (ou null se ainda não existe)

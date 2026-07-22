@@ -1,5 +1,5 @@
 // Faísca — service worker (funciona offline)
-const CACHE = "faisca-v20";
+const CACHE = "faisca-v21";
 const ASSETS = [
   "./",
   "./index.html",
@@ -44,6 +44,7 @@ self.addEventListener("fetch", (e) => {
         }
         return res;
       }).catch(() => cached);
+      if (e.request.mode === "navigate" || /\.(?:js|css)$/.test(url.pathname)) return network;
       return cached || network;
     })
   );
