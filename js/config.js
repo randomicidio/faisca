@@ -1,0 +1,21 @@
+// ============================================================
+//  FAÍSCA — Configuração
+// ============================================================
+//  Você só precisa mexer em UMA linha aqui: o CLIENT_ID.
+//  Pegue ele no Google Cloud (veja o passo a passo no LEIA-ME.md).
+//  Enquanto estiver vazio, o app funciona 100% offline (salva no
+//  próprio aparelho). Assim que colar o CLIENT_ID, a sincronização
+//  com o Google Drive fica disponível.
+// ============================================================
+
+window.FAISCA_CONFIG = {
+  // Cole aqui o seu Client ID (termina em .apps.googleusercontent.com)
+  GOOGLE_CLIENT_ID: "1060218621029-94iml7nmubbv0mdeos1qeqs2js49pfqp.apps.googleusercontent.com",
+
+  // Nome do arquivo que guarda seus dados no Drive de cada pessoa.
+  // Não precisa mudar.
+  DRIVE_FILE_NAME: "faisca-dados.json",
+
+  // Só o acesso ao próprio arquivo do app. Não mexa nisso.
+  DRIVE_SCOPE: "https://www.googleapis.com/auth/drive.file",
+};
