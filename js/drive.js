@@ -173,14 +173,6 @@
     return fileId;
   }
 
-  async function fetchUserEmail() {
-    try {
-      const res = await api("https://www.googleapis.com/oauth2/v3/userinfo").catch(() => null);
-      if (res && res.ok) { const u = await res.json(); return u.email || u.name || ""; }
-    } catch (e) {}
-    return "";
-  }
-
   // ---- API pública ----
   const Drive = {
     available,
@@ -196,15 +188,11 @@
           selectAccount: !!options.selectAccount,
         });
         if (!acceptToken(resp)) throw new Error("AutorizaÃ§Ã£o nÃ£o concluÃ­da.");
-        const email = await fetchUserEmail();
-        if (email) localStorage.setItem(LS_USER, email);
-        return email;
+        return "";
       }
       await initClient();
       await ensureToken(true, !!options.selectAccount);
-      const email = await fetchUserEmail();
-      if (email) localStorage.setItem(LS_USER, email);
-      return email;
+      return "";
     },
 
     async reconnectSilently() {
