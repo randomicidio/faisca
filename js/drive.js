@@ -67,6 +67,7 @@
   async function ensureToken(interactive) {
     await initClient();
     if (accessToken && Date.now() < tokenExpiry) return accessToken;
+    if (!interactive) throw new Error("Login necessario para sincronizar.");
     return requestToken(!!interactive);
   }
 
@@ -169,7 +170,7 @@
 
     async reconnectSilently() {
       if (!available() || !this.wasConnected()) return false;
-      try { await ensureToken(false); return this.isConnected(); }
+      try { return this.isConnected(); }
       catch (e) { return false; }
     },
 
