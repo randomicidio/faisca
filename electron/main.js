@@ -1,4 +1,5 @@
 const { app, BrowserWindow, shell } = require("electron");
+const path = require("path");
 
 const APP_URL = "https://randomicidio.github.io/faisca/";
 
@@ -9,6 +10,7 @@ function createWindow() {
     minWidth: 390,
     minHeight: 640,
     title: "Faísca",
+    icon: path.join(__dirname, "..", "icons", "faisca.ico"),
     backgroundColor: "#f3f1ec",
     autoHideMenuBar: true,
     webPreferences: {

@@ -854,11 +854,42 @@
 
   let lastPull = 0;
   function maybePull() { if (!D.isConnected()) return; if (Date.now() - lastPull < 8000) return; lastPull = Date.now(); Sync.pull(); }
+  async function refreshNow(manual) {
+    if (D.isConnected()) {
+      lastPull = Date.now();
+      await Sync.full(manual);
+    } else if (manual) {
+      location.reload();
+    }
+  }
   window.addEventListener("focus", maybePull);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) maybePull(); });
   setInterval(() => {
     if (!document.hidden) maybePull();
   }, 20000);
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "F5") return;
+    e.preventDefault();
+    refreshNow(true);
+  });
+
+  let pullStartY = null;
+  let pullReady = false;
+  window.addEventListener("touchstart", (e) => {
+    if (window.scrollY <= 0 && e.touches.length === 1) {
+      pullStartY = e.touches[0].clientY;
+      pullReady = false;
+    }
+  }, { passive: true });
+  window.addEventListener("touchmove", (e) => {
+    if (pullStartY == null || e.touches.length !== 1) return;
+    pullReady = e.touches[0].clientY - pullStartY > 90 && window.scrollY <= 0;
+  }, { passive: true });
+  window.addEventListener("touchend", () => {
+    if (pullReady) refreshNow(true);
+    pullStartY = null;
+    pullReady = false;
+  });
 
   // ============================================================
   //  Boot

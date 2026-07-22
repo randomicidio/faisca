@@ -12,14 +12,15 @@
     "appId": "com.dincontent.faisca",
     "productName": "Faísca",
     "files": [
-      "electron/**/*"
+      "electron/**/*",
+      "icons/faisca.ico"
     ],
     "directories": {
       "output": "dist"
     },
     "win": {
       "target": "portable",
-      "icon": "icons/icon-512.png"
+      "icon": "icons/faisca.ico"
     }
   },
   "devDependencies": {
