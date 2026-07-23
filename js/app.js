@@ -50,6 +50,8 @@
   let drawerURLs = [];
   let rec = null;       // gravação em andamento
   let recTimer = null;
+  let vcFacing = "environment";
+  let vcRatio = "9:16";
 
   // ---------- scaffold ----------
   const root = document.getElementById("app");
@@ -487,13 +489,12 @@
     const created = new Date(idea.created);
     return `
       <div class="drawer__head">
-        <span class="head-stage" id="dwHeadStage">${S.STAGES.find((s) => s.key === idea.stage).label}</span>
-        <div style="flex:1"></div>
+        <textarea class="drawer__title-input" id="dwTitle" rows="1" placeholder="Titulo da ideia...">${esc(idea.title)}</textarea>
         <button class="icon-btn" id="dwClose" title="Fechar">${I.x}</button>
       </div>
       <div class="drawer__body">
-        <div class="drawer__title">
-          <textarea class="drawer__title-input" id="dwTitle" rows="1" placeholder="Título da ideia...">${esc(idea.title)}</textarea>
+        <div class="drawer__title-meta">
+          <span class="head-stage" id="dwHeadStage">${S.STAGES.find((s) => s.key === idea.stage).label}</span>
           <div class="drawer__created">Criada em ${created.getDate()} ${MESES[created.getMonth()]} ${created.getFullYear()}</div>
         </div>
 
@@ -549,7 +550,8 @@
       $$(".stage-pick", drawer).forEach((x) => x.classList.toggle("is-active", x === b));
       const p = S.progressOf(S.getIdea(id));
       g("#dwProgBar").style.width = p + "%"; g("#dwProgPct").textContent = p + "%";
-      g("#dwHeadStage").textContent = S.STAGES.find((s) => s.key === b.dataset.stage).label;
+      const headStage = g("#dwHeadStage");
+      if (headStage) headStage.textContent = S.STAGES.find((s) => s.key === b.dataset.stage).label;
     });
 
     const script = g("#dwScript");
@@ -794,37 +796,50 @@
   async function openVideoCamera(ideaId) {
     if (rec) return;
     if (!navigator.mediaDevices || !window.MediaRecorder) { toast("Seu navegador nao permite gravar aqui", true); return; }
+    const ratioValue = () => vcRatio === "1:1" ? 1 : vcRatio === "16:9" ? 16 / 9 : 9 / 16;
+    const constraints = () => ({
+      video: { facingMode: { ideal: vcFacing }, aspectRatio: { ideal: ratioValue() }, width: { ideal: 1080 }, height: { ideal: 1920 } },
+      audio: true,
+    });
+    const getStream = async () => navigator.mediaDevices.getUserMedia(constraints());
     let stream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: true });
-    } catch (e) {
-      toast("Preciso de acesso a camera e ao microfone", true);
-      return;
-    }
+    try { stream = await getStream(); }
+    catch (e) { toast("Preciso de acesso a camera e ao microfone", true); return; }
     const host = document.createElement("div");
-    host.className = "video-capture";
+    host.className = "video-capture ratio-" + vcRatio.replace(":", "-");
     host.innerHTML = `
       <video class="video-capture__preview" autoplay muted playsinline></video>
       <div class="video-capture__shade top"></div>
       <div class="video-capture__shade bottom"></div>
       <button class="video-capture__close" id="vcClose" title="Fechar">${I.x}</button>
       <div class="video-capture__time"><span class="rec-dot" hidden></span><span id="vcTime">0:00</span></div>
+      <div class="video-capture__tools">
+        <button class="video-capture__tool" id="vcFlip" title="Trocar camera">${I.refresh}<span>Virar</span></button>
+        <div class="video-capture__ratios" id="vcRatios">
+          <button data-ratio="9:16">9:16</button>
+          <button data-ratio="1:1">1:1</button>
+          <button data-ratio="16:9">16:9</button>
+        </div>
+      </div>
       <div class="video-capture__controls">
         <button class="video-capture__gallery" id="vcGallery">${I.image}<span>Galeria</span></button>
         <button class="video-capture__record" id="vcRecord" title="Gravar"></button>
       </div>`;
     document.body.appendChild(host);
-    $(".video-capture__preview", host).srcObject = stream;
+    const preview = $(".video-capture__preview", host);
+    preview.srcObject = stream;
+    $$("[data-ratio]", host).forEach((b) => b.classList.toggle("is-active", b.dataset.ratio === vcRatio));
     let mr;
     try { mr = new MediaRecorder(stream); }
     catch (e) { stream.getTracks().forEach((t) => t.stop()); host.remove(); toast("Nao consegui iniciar a gravacao", true); return; }
     const chunks = [];
-    mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-    mr.onstop = async () => {
-      stream.getTracks().forEach((t) => t.stop());
+    const attachRecorder = (recorder) => {
+      recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+      recorder.onstop = async () => {
+      if (rec && rec.stream) rec.stream.getTracks().forEach((t) => t.stop());
       clearInterval(recTimer); recTimer = null;
       const canceled = rec && rec.canceled;
-      const blob = new Blob(chunks, { type: mr.mimeType || "video/webm" });
+      const blob = new Blob(chunks, { type: recorder.mimeType || "video/webm" });
       rec = null;
       if (canceled || !blob.size) { host.remove(); return; }
       const stamp = new Date().toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -834,17 +849,44 @@
         toast("Video salvo");
       } catch (e) { toast("Nao consegui salvar o video", true); }
       host.remove();
+      };
     };
+    attachRecorder(mr);
     rec = { mr, stream, kind: "video", startTs: null, canceled: false, host };
     $("#vcClose", host).addEventListener("click", closeVideoCamera);
     $("#vcGallery", host).addEventListener("click", () => pickVideoFromGallery(ideaId));
+    $("#vcFlip", host).addEventListener("click", async () => {
+      if (!rec || rec.startTs) return;
+      vcFacing = vcFacing === "environment" ? "user" : "environment";
+      try {
+        rec.stream.getTracks().forEach((t) => t.stop());
+        rec.stream = await getStream();
+        preview.srcObject = rec.stream;
+        rec.mr = new MediaRecorder(rec.stream);
+        attachRecorder(rec.mr);
+      } catch (e) { toast("Nao consegui trocar a camera", true); }
+    });
+    $("#vcRatios", host).addEventListener("click", async (e) => {
+      const b = e.target.closest("[data-ratio]"); if (!b || !rec || rec.startTs) return;
+      vcRatio = b.dataset.ratio;
+      host.classList.remove("ratio-9-16", "ratio-1-1", "ratio-16-9");
+      host.classList.add("ratio-" + vcRatio.replace(":", "-"));
+      $$("[data-ratio]", host).forEach((x) => x.classList.toggle("is-active", x === b));
+      try {
+        rec.stream.getTracks().forEach((t) => t.stop());
+        rec.stream = await getStream();
+        preview.srcObject = rec.stream;
+        rec.mr = new MediaRecorder(rec.stream);
+        attachRecorder(rec.mr);
+      } catch (err) {}
+    });
     $("#vcRecord", host).addEventListener("click", () => {
       if (!rec) return;
       if (rec.startTs) { stopRec(false); return; }
       rec.startTs = Date.now();
       host.classList.add("is-recording");
       $(".rec-dot", host).hidden = false;
-      mr.start();
+      rec.mr.start();
       recTimer = setInterval(renderRecTime, 250);
     });
   }
@@ -1499,6 +1541,22 @@
   // "puxar pra atualizar" — só na tela do quadro, nunca com a edição aberta
   let pullStartY = null;
   let pullReady = false;
+  let drawerTouchY = null;
+  window.addEventListener("touchstart", (e) => {
+    drawerTouchY = openId && e.touches.length === 1 && e.target.closest && e.target.closest(".drawer")
+      ? e.touches[0].clientY
+      : null;
+  }, { passive: true });
+  window.addEventListener("touchmove", (e) => {
+    if (drawerTouchY == null || e.touches.length !== 1) return;
+    const body = drawer && $(".drawer__body", drawer);
+    const title = drawer && $("#dwTitle", drawer);
+    const target = e.target;
+    const dy = e.touches[0].clientY - drawerTouchY;
+    const titleOwnScroll = title && title.contains(target) && title.scrollTop > 0;
+    if (dy > 0 && body && body.scrollTop <= 0 && !titleOwnScroll) e.preventDefault();
+  }, { passive: false });
+  window.addEventListener("touchend", () => { drawerTouchY = null; }, { passive: true });
   function gestureBlocked(target) {
     if (openId || document.querySelector(".modal-center")) return true;
     if (target && target.closest && target.closest(".mini-prog")) return true;  // arrastando a etapa
@@ -1550,8 +1608,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v40") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v40", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v41") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v41", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1559,7 +1617,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "40";
+    document.documentElement.dataset.appVersion = "41";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia

@@ -43,6 +43,14 @@
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
   background: #000;
 }
+.video-capture.ratio-1-1 .video-capture__preview {
+  inset: 50% auto auto 50%; width: min(100vw, 100vh); height: min(100vw, 100vh);
+  transform: translate(-50%, -50%);
+}
+.video-capture.ratio-16-9 .video-capture__preview {
+  inset: 50% auto auto 50%; width: 100vw; height: min(56.25vw, 100vh);
+  transform: translate(-50%, -50%);
+}
 .video-capture__shade {
   position: absolute; left: 0; right: 0; pointer-events: none;
 }
@@ -71,6 +79,25 @@
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
   gap: 18px; padding: 0 22px;
 }
+.video-capture__tools {
+  position: absolute; top: max(74px, calc(env(safe-area-inset-top) + 58px)); right: 14px;
+  display: grid; gap: 10px; justify-items: end;
+}
+.video-capture__tool {
+  border: none; color: #fff; background: rgba(0,0,0,.38); border-radius: 999px;
+  padding: 9px 12px; display: inline-flex; align-items: center; gap: 7px;
+  font-size: 11.5px; font-weight: 800; backdrop-filter: blur(10px);
+}
+.video-capture__tool svg { width: 17px; height: 17px; }
+.video-capture__ratios {
+  display: inline-flex; padding: 3px; border-radius: 999px;
+  background: rgba(0,0,0,.38); backdrop-filter: blur(10px);
+}
+.video-capture__ratios button {
+  border: none; background: transparent; color: rgba(255,255,255,.78);
+  border-radius: 999px; padding: 7px 9px; font-size: 11px; font-weight: 850;
+}
+.video-capture__ratios button.is-active { color: #111; background: #fff; }
 .video-capture__gallery {
   justify-self: start; border: none; color: #fff; background: rgba(255,255,255,.16);
   border-radius: 18px; padding: 10px 12px; min-width: 76px;
@@ -86,6 +113,8 @@
 .video-capture.is-recording .video-capture__record {
   width: 70px; height: 70px; border-width: 22px; background: #fff;
 }
+.video-capture.is-recording .video-capture__tools,
+.video-capture.is-recording .video-capture__gallery { opacity: .45; pointer-events: none; }
 
 @media (prefers-color-scheme: dark) {
   :root {
@@ -323,14 +352,16 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 }
 .drawer.open { transform: none; }
 .drawer__head {
-  display: flex; align-items: center; gap: 12px; padding: 16px 20px;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 13px 16px 11px 20px;
   border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: blur(8px); position: sticky; top: 0;
 }
+.drawer, .drawer__body { overscroll-behavior: contain; }
 .drawer__body { overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; flex: 1; }
 .drawer__title-input {
-  border: none; background: none; font-size: 21px; font-weight: 750; letter-spacing: -.02em; width: 100%;
-  padding: 2px 0; resize: none; overflow: hidden; line-height: 1.25;
+  border: none; background: none; font-size: 19px; font-weight: 760; letter-spacing: 0; width: 100%;
+  padding: 4px 0 2px; resize: none; overflow-y: auto; line-height: 1.22;
+  max-height: 92px; overscroll-behavior: contain;
 }
 .drawer__title-input:focus { box-shadow: none; }
 
@@ -566,6 +597,7 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
    o título até sumir. Nada dentro do corpo pode encolher. */
 .drawer__body > * { flex: none; }
 .drawer__title { display: flex; flex-direction: column; gap: 3px; }
+.drawer__title-meta { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
 .drawer__created { font-size: 11.5px; color: var(--text-faint); }
 
 /* rodapé: Excluir de um lado, Salvar do outro */
