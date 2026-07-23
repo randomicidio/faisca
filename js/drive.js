@@ -11,6 +11,7 @@
   const LS_APP_FOLDER = "faisca:drive:appFolderId";
   const LS_TOKEN = "faisca:drive:accessToken";
   const LS_TOKEN_EXPIRY = "faisca:drive:tokenExpiry";
+  const LS_SESSION = "faisca:drive:session";
   const SILENT_REFRESH_COOLDOWN = 30000;
 
   let tokenClient = null;
@@ -34,6 +35,17 @@
   let lastSilentRefreshAttempt = 0;
 
   const available = () => !!(CFG.GOOGLE_CLIENT_ID && CFG.GOOGLE_CLIENT_ID.trim());
+  const sessionApi = () => String(CFG.DRIVE_SESSION_API || "").replace(/\/$/, "");
+  const usesSessionBackend = () => !!(sessionApi() && !window.FaiscaDesktopOAuth);
+
+  function takeReturnedSession() {
+    const match = String(location.hash || "").match(/(?:^#|&)faisca_session=([^&]+)/);
+    if (!match) return;
+    try { localStorage.setItem(LS_SESSION, decodeURIComponent(match[1])); } catch (e) {}
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+
+  takeReturnedSession();
 
   function waitForGIS() {
     return new Promise((resolve, reject) => {
@@ -78,6 +90,13 @@
   }
 
   async function ensureToken(interactive, selectAccount) {
+    if (usesSessionBackend()) {
+      if (accessToken && Date.now() < tokenExpiry) return accessToken;
+      if (await refreshFromSession()) return accessToken;
+      if (!interactive) throw new Error("Login necessario para sincronizar.");
+      beginSessionLogin(!!selectAccount);
+      throw new Error("Abrindo o login do Google...");
+    }
     await initClient();
     if (accessToken && Date.now() < tokenExpiry) return accessToken;
     if (!interactive && localStorage.getItem(LS_FLAG) === "1") {
@@ -86,6 +105,30 @@
     }
     if (!interactive) throw new Error("Login necessario para sincronizar.");
     return requestToken(!!interactive, !!selectAccount);
+  }
+
+  function beginSessionLogin(selectAccount) {
+    const back = location.origin + location.pathname;
+    const url = new URL(sessionApi() + "/auth/start");
+    url.searchParams.set("return_to", back);
+    if (selectAccount) url.searchParams.set("select_account", "1");
+    location.assign(url.toString());
+  }
+
+  async function refreshFromSession() {
+    const session = localStorage.getItem(LS_SESSION);
+    if (!session || !usesSessionBackend()) return false;
+    try {
+      const res = await fetch(sessionApi() + "/token", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + session },
+      });
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) localStorage.removeItem(LS_SESSION);
+        return false;
+      }
+      return acceptToken(await res.json());
+    } catch (e) { return false; }
   }
 
   async function refreshSilently() {
@@ -250,6 +293,10 @@
         if (!acceptToken(resp)) throw new Error("AutorizaÃ§Ã£o nÃ£o concluÃ­da.");
         return "";
       }
+      if (usesSessionBackend()) {
+        beginSessionLogin(!!options.selectAccount);
+        return "";
+      }
       await initClient();
       await ensureToken(true, !!options.selectAccount);
       return "";
@@ -263,6 +310,7 @@
           const restored = await window.FaiscaDesktopOAuth.restore({ clientId: CFG.GOOGLE_DESKTOP_CLIENT_ID.trim() });
           return acceptToken(restored);
         }
+        if (usesSessionBackend()) return refreshFromSession();
         return false;
       }
       catch (e) { return false; }
@@ -278,6 +326,11 @@
       localStorage.removeItem(LS_FILE);
       localStorage.removeItem(LS_USER);
       localStorage.removeItem(LS_APP_FOLDER);
+      const session = localStorage.getItem(LS_SESSION);
+      localStorage.removeItem(LS_SESSION);
+      if (session && usesSessionBackend()) {
+        fetch(sessionApi() + "/session", { method: "DELETE", headers: { Authorization: "Bearer " + session } }).catch(() => {});
+      }
       if (window.FaiscaDesktopOAuth && window.FaiscaDesktopOAuth.disconnect) window.FaiscaDesktopOAuth.disconnect().catch(() => {});
       window.dispatchEvent(new CustomEvent("faisca:drive-state", { detail: { connected: false } }));
     },

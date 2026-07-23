@@ -16,6 +16,11 @@ window.FAISCA_CONFIG = {
   // Quando preenchido, o app desktop abre o login no navegador padrão.
   GOOGLE_DESKTOP_CLIENT_ID: "1060218621029-7jlo1rpo6jm77kae9aurm2up3e4ffjpd.apps.googleusercontent.com",
 
+  // Endereco do backend de sessao (Cloudflare Worker). Quando preenchido, a
+  // versao web renova o acesso ao Drive sem pedir login novamente. O .exe e o
+  // .dmg continuam usando a propria sessao local.
+  DRIVE_SESSION_API: "",
+
   // Nome do arquivo que guarda seus dados no Drive de cada pessoa.
   // Não precisa mudar.
   DRIVE_FILE_NAME: "faisca-dados.json",

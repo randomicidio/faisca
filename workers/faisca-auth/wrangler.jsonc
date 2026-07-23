@@ -1,0 +1,17 @@
+{
+  "name": "faisca-auth",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-23",
+  "workers_dev": true,
+  "kv_namespaces": [
+    {
+      "binding": "SESSIONS",
+      "id": "COLE_AQUI_O_ID_DO_KV"
+    }
+  ],
+  "vars": {
+    "APP_ORIGIN": "https://randomicidio.github.io",
+    "APP_PATH": "/faisca/",
+    "GOOGLE_SCOPE": "https://www.googleapis.com/auth/drive.file"
+  }
+}
