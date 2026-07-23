@@ -328,6 +328,11 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 }
 .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--border-strong); }
 .card.dragging { opacity: .55; }
+.card.drag-placeholder { opacity: .18; outline: 2px dashed var(--accent-line); outline-offset: -4px; }
+.drag-ghost {
+  position: fixed; left: 0; top: 0; z-index: 110; pointer-events: none;
+  opacity: .96; transform-origin: 0 0; box-shadow: var(--shadow-lg);
+}
 
 
 .card__title { font-size: 15px; font-weight: 650; letter-spacing: -.01em; line-height: 1.32; word-break: break-word; }
@@ -600,11 +605,19 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 .drawer__title-meta { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
 .drawer__created { font-size: 11.5px; color: var(--text-faint); }
 .drawer__delete-row {
-  padding-top: 4px; display: flex; justify-content: flex-start;
+  margin-top: 8px; padding: 14px 0 0; border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+}
+.drawer__delete-row b { display: block; font-size: 13px; }
+.drawer__delete-row small { display: block; color: var(--text-faint); font-size: 12px; margin-top: 2px; }
+.drawer__delete-row .btn-danger { flex: none; }
+
+.drawer__foot .btn-save {
+  width: 100%; justify-content: center; padding: 12px 20px; font-size: 14.5px;
 }
 
 /* rodapé: Excluir de um lado, Salvar do outro */
-.drawer__foot { justify-content: flex-end; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+.drawer__foot { justify-content: stretch; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
 .btn-save {
   border: none; background: linear-gradient(135deg, var(--accent-2), var(--accent)); color: var(--accent-ink);
   border-radius: 10px; padding: 10px 20px; font-weight: 700; font-size: 13.5px;
@@ -612,6 +625,9 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 }
 .btn-save:hover { filter: brightness(1.05); }
 .btn-save svg { width: 15px; height: 15px; }
+.drawer__foot .btn-save {
+  width: 100%; justify-content: center; padding: 12px 20px; font-size: 14.5px;
+}
 
 /* conflito de mesclagem */
 .conflict-card { max-width: 520px; }
@@ -690,6 +706,7 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 /* cards da mesma linha ficam da mesma altura; o rodapé cola embaixo */
 .board-flat .card { display: flex; flex-direction: column; }
 .board-flat .card { touch-action: none; }
+.board-flat .card.drag-placeholder { opacity: .18; outline: 2px dashed var(--accent-line); outline-offset: -4px; }
 .board-flat .card__meta { margin-top: auto; padding-top: 11px; }
 .board-flat .stage-empty { grid-column: 1 / -1; }
 

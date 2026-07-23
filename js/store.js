@@ -15,8 +15,6 @@
 
   const PLATFORMS = [
     { key: "tiktok",    label: "TikTok" },
-    { key: "reels",     label: "Reels" },
-    { key: "shorts",    label: "Shorts" },
     { key: "youtube",   label: "YouTube" },
     { key: "instagram", label: "Instagram" },
     { key: "kwai",      label: "Kwai" },
