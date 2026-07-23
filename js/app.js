@@ -131,6 +131,92 @@
   $("#sparkNew").addEventListener("click", () => { currentSpark = S.randomSpark(); $("#sparkText").textContent = currentSpark; });
   $("#sparkText").addEventListener("click", () => { $("#capture").value = currentSpark; $("#capture").focus(); });
 
+  // ---------- instalar no aparelho ----------
+  // O navegador esconde a instalação no menu, e quase ninguém acha.
+  // Guardamos o convite do navegador e oferecemos na hora certa.
+  let convite = null;
+  const LS_DISPENSOU = "faisca:instalar:dispensado";
+
+  const jaEhApp = () =>
+    matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    convite = e;
+    mostrarFaixaInstalar();
+  });
+  window.addEventListener("appinstalled", () => {
+    convite = null;
+    localStorage.removeItem(LS_DISPENSOU);
+    const f = $("#instalarFaixa"); if (f) f.remove();
+    toast("Instalado! Agora é só abrir pelo ícone ✨");
+  });
+
+  function mostrarFaixaInstalar() {
+    if (!convite || jaEhApp()) return;
+    if (localStorage.getItem(LS_DISPENSOU) === "1") return;
+    if ($("#instalarFaixa")) return;
+    const f = document.createElement("div");
+    f.className = "install-bar";
+    f.id = "instalarFaixa";
+    f.innerHTML = `
+      <img src="./icons/icon-192.png" alt="">
+      <div class="install-bar__txt">
+        <b>Instale o Faísca no seu aparelho</b>
+        <small>Abre direto pelo ícone, em tela cheia, e funciona sem internet.</small>
+      </div>
+      <button class="install-bar__no" data-i="nao">Agora não</button>
+      <button class="install-bar__yes" data-i="sim">${I.down} Instalar</button>`;
+    f.addEventListener("click", async (e) => {
+      const b = e.target.closest("[data-i]"); if (!b) return;
+      if (b.dataset.i === "nao") { localStorage.setItem(LS_DISPENSOU, "1"); f.remove(); return; }
+      f.remove();
+      await instalarAgora();
+    });
+    const alvo = $(".toolbar");
+    alvo.parentNode.insertBefore(f, alvo);
+  }
+
+  async function instalarAgora() {
+    if (jaEhApp()) { toast("Você já está usando o app instalado"); return; }
+    if (convite) {
+      convite.prompt();
+      try { await convite.userChoice; } catch (e) {}
+      convite = null;
+      return;
+    }
+    comoInstalarModal();
+  }
+
+  // Sem convite do navegador (iPhone, Firefox, ou já dispensado):
+  // explicamos o caminho manual, que muda de navegador pra navegador.
+  function comoInstalarModal() {
+    const ua = navigator.userAgent;
+    const iOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const passos = iOS
+      ? `<li>Toque no botão <b>Compartilhar</b> (o quadradinho com a seta pra cima), na barra do Safari.</li>
+         <li>Role a lista e toque em <b>Adicionar à Tela de Início</b>.</li>
+         <li>Confirme em <b>Adicionar</b>.</li>`
+      : `<li>Toque no menu do navegador (os <b>três pontinhos</b>, no canto).</li>
+         <li>Escolha <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.</li>
+         <li>Confirme em <b>Instalar</b>.</li>`;
+    const host = document.createElement("div");
+    host.className = "modal-center";
+    host.innerHTML = `
+      <div class="scrim open" style="position:absolute"></div>
+      <div class="modal-card">
+        <h3>Instalar o Faísca</h3>
+        <p style="color:var(--text-dim);font-size:14px;margin:0 0 12px">
+          Ele vira um app de verdade: ícone próprio, tela cheia, funciona sem internet e se atualiza sozinho.</p>
+        <ol class="passos">${passos}</ol>
+        <div class="row-btns"><button data-x="cancel">Fechar</button></div>
+      </div>`;
+    document.body.appendChild(host);
+    const fechar = () => host.remove();
+    host.querySelector('[data-x="cancel"]').addEventListener("click", fechar);
+    host.querySelector(".scrim").addEventListener("click", fechar);
+  }
+
   // ---------- ordenação ----------
   const SORTS = [
     { key: "manual",  label: "Manual",       hint: "a ordem que você arrastar" },
@@ -962,6 +1048,7 @@
       <button data-a="export">${I.down} Fazer backup (baixar)</button>
       <button data-a="import">${I.up} Restaurar backup</button>
       <hr>
+      ${jaEhApp() ? "" : `<button data-a="install">${I.down} Instalar no aparelho</button>`}
       <button data-a="clearposted">${I.trash} Limpar itens postados</button>
       <button data-a="about">⚡ Sobre o Faísca</button>`;
     const r = $("#menu").getBoundingClientRect();
@@ -979,6 +1066,7 @@
       else if (a === "disconnect") { D.disconnect(); Sync.setStatus("off"); toast("Drive desconectado"); }
       else if (a === "export") doExport();
       else if (a === "import") doImport();
+      else if (a === "install") instalarAgora();
       else if (a === "clearposted") clearPosted();
       else if (a === "about") aboutModal();
     });
@@ -1353,7 +1441,7 @@
       if (restored) Sync.pull();
     } else Sync.setStatus("local");
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("./service-worker.js").catch(() => {});
-    document.documentElement.dataset.appVersion = "35";
+    document.documentElement.dataset.appVersion = "36";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
