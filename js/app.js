@@ -1917,8 +1917,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v57") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v57", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v59") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v59", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1926,7 +1926,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "57";
+    document.documentElement.dataset.appVersion = "59";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
@@ -1937,7 +1937,16 @@
     for (const r of recs) {
       if (!r.ideaId) continue;
       const idea = S.getIdea(r.ideaId);
-      if (idea && !idea.media.some((m) => m.id === r.id)) {
+      if (!idea) {
+        await M.del(r.id);
+        continue;
+      }
+      const apagada = (idea.mediaTombstones || []).some((t) => t.id === r.id);
+      if (apagada) {
+        await M.del(r.id);
+        continue;
+      }
+      if (!idea.media.some((m) => m.id === r.id)) {
         idea.media.push({
           id: r.id, kind: r.kind || "audio", mime: r.mime || (r.blob && r.blob.type) || "",
           name: r.name || "", size: r.size || (r.blob && r.blob.size) || 0,
