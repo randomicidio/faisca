@@ -11,11 +11,12 @@
   const LS_APP_FOLDER = "faisca:drive:appFolderId";
   const LS_TOKEN = "faisca:drive:accessToken";
   const LS_TOKEN_EXPIRY = "faisca:drive:tokenExpiry";
+  const SILENT_REFRESH_COOLDOWN = 30000;
 
   let tokenClient = null;
   let accessToken = localStorage.getItem(LS_TOKEN) || null;
   let tokenExpiry = Number(localStorage.getItem(LS_TOKEN_EXPIRY)) || 0;
-  if (!accessToken || Date.now() >= tokenExpiry) {
+  if (!accessToken) {
     accessToken = null;
     tokenExpiry = 0;
     localStorage.removeItem(LS_TOKEN);
@@ -29,6 +30,8 @@
   let lastStamp = null;
   let folderChecked = false;
   let aboutCache = null;
+  let silentRefreshPromise = null;
+  let lastSilentRefreshAttempt = 0;
 
   const available = () => !!(CFG.GOOGLE_CLIENT_ID && CFG.GOOGLE_CLIENT_ID.trim());
 
@@ -77,8 +80,24 @@
   async function ensureToken(interactive, selectAccount) {
     await initClient();
     if (accessToken && Date.now() < tokenExpiry) return accessToken;
+    if (!interactive && localStorage.getItem(LS_FLAG) === "1") {
+      const refreshed = await refreshSilently();
+      if (refreshed) return accessToken;
+    }
     if (!interactive) throw new Error("Login necessario para sincronizar.");
     return requestToken(!!interactive, !!selectAccount);
+  }
+
+  async function refreshSilently() {
+    if (accessToken && Date.now() < tokenExpiry) return true;
+    if (silentRefreshPromise) return silentRefreshPromise;
+    if (Date.now() - lastSilentRefreshAttempt < SILENT_REFRESH_COOLDOWN) return false;
+    lastSilentRefreshAttempt = Date.now();
+    silentRefreshPromise = requestToken(false, false)
+      .then(() => !!accessToken && Date.now() < tokenExpiry)
+      .catch(() => false)
+      .finally(() => { silentRefreshPromise = null; });
+    return silentRefreshPromise;
   }
 
   function acceptToken(resp) {
@@ -114,6 +133,10 @@
       tokenExpiry = 0;
       localStorage.removeItem(LS_TOKEN);
       localStorage.removeItem(LS_TOKEN_EXPIRY);
+      if (await refreshSilently()) {
+        opts.headers = Object.assign({}, opts.headers, { Authorization: "Bearer " + accessToken });
+        res = await fetch(url, opts);
+      }
     }
     return res;
   }
@@ -240,7 +263,8 @@
           const restored = await window.FaiscaDesktopOAuth.restore({ clientId: CFG.GOOGLE_DESKTOP_CLIENT_ID.trim() });
           return acceptToken(restored);
         }
-        return false;
+        await initClient();
+        return refreshSilently();
       }
       catch (e) { return false; }
     },
