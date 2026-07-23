@@ -21,8 +21,6 @@
     moon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>',
     menu: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
     plus: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
-    left: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
-    right: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
     check: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
     trash: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>',
     x: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
@@ -37,7 +35,7 @@
     image: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="m21 15-5-5L5 21"/></svg>',
     upload: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0 4 4m-4-4-4 4M4 20h16"/></svg>',
     stop: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>',
-    caret: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+    sort: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M6 12h12M9 18h6"/></svg>',
     grip: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>',
     edit: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
     google: '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.5 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2-1.9 3.2-4.7 3.2-7.9Z"/><path fill="#34A853" d="M12 23c2.9 0 5.4-1 7.2-2.6l-3.6-2.7c-1 .7-2.3 1-3.6 1-2.8 0-5.1-1.9-6-4.4H2.3v2.8A11 11 0 0 0 12 23Z"/><path fill="#FBBC05" d="M6 14.3a6.6 6.6 0 0 1 0-4.2V7.3H2.3a11 11 0 0 0 0 9.9L6 14.3Z"/><path fill="#EA4335" d="M12 5.5c1.6 0 3 .5 4.1 1.6l3.1-3.1A11 11 0 0 0 2.3 7.3L6 10.1c.9-2.6 3.2-4.6 6-4.6Z"/></svg>',
@@ -48,7 +46,6 @@
   let openId = null;
   let boardFrozen = false;
   let dragId = null;
-  let dragFromStage = null;
   let currentSpark = S.randomSpark();
   let drawerURLs = [];
   let rec = null;       // gravação em andamento
@@ -87,6 +84,7 @@
 
       <div class="toolbar">
         <label class="toolbar-search">${I.search}<input id="search" type="search" placeholder="Buscar nas suas ideias..." autocomplete="off"></label>
+        <button class="sort-btn" id="sortBtn" title="Ordenar">${I.sort}<span id="sortLabel">Manual</span></button>
       </div>
 
       <div id="boardHost"></div>
@@ -133,6 +131,43 @@
   $("#sparkNew").addEventListener("click", () => { currentSpark = S.randomSpark(); $("#sparkText").textContent = currentSpark; });
   $("#sparkText").addEventListener("click", () => { $("#capture").value = currentSpark; $("#capture").focus(); });
 
+  // ---------- ordenação ----------
+  const SORTS = [
+    { key: "manual",  label: "Manual",       hint: "a ordem que você arrastar" },
+    { key: "status",  label: "Status",       hint: "mais perto de pronto no topo" },
+    { key: "criacao", label: "Mais recentes", hint: "pela data de criação" },
+  ];
+  function atualizarBotaoOrdem() {
+    const s = SORTS.find((x) => x.key === (S.get().settings.sort || "manual")) || SORTS[0];
+    const lb = $("#sortLabel"); if (lb) lb.textContent = s.label;
+  }
+  $("#sortBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const aberto = $(".menu"); if (aberto) { aberto.remove(); return; }
+    const atual = S.get().settings.sort || "manual";
+    const m = document.createElement("div");
+    m.className = "menu sort-menu";
+    m.innerHTML = `<div class="muted">Ordenar por</div>` + SORTS.map((s) =>
+      `<button data-s="${s.key}" class="${s.key === atual ? "is-on" : ""}">
+         <span class="sort-tick">${s.key === atual ? I.check : ""}</span>
+         <span><b>${s.label}</b><small>${s.hint}</small></span>
+       </button>`).join("") +
+      `<hr><div class="sort-note">Arrastar um card sempre volta pro manual.</div>`;
+    const r = $("#sortBtn").getBoundingClientRect();
+    m.style.top = r.bottom + 8 + "px";
+    m.style.right = Math.max(12, window.innerWidth - r.right) + "px";
+    document.body.appendChild(m);
+    const fechar = () => { m.remove(); document.removeEventListener("click", fechar); };
+    setTimeout(() => document.addEventListener("click", fechar), 0);
+    m.addEventListener("click", (ev) => {
+      const b = ev.target.closest("button[data-s]"); if (!b) return;
+      fechar();
+      S.setSort(b.dataset.s);
+      atualizarBotaoOrdem();
+      renderBoard();
+    });
+  });
+
   // ---------- search ----------
   $("#search").addEventListener("input", debounce((e) => { search = e.target.value.trim().toLowerCase(); renderBoard(); }, 120));
   function visibleIdeas() {
@@ -154,45 +189,33 @@
         </div>`;
       return;
     }
-    const ideas = visibleIdeas().slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-    const byStage = {}; S.STAGES.forEach((s) => (byStage[s.key] = []));
-    ideas.forEach((i) => (byStage[i.stage] || byStage.ideia).push(i));
-    const collapsed = new Set(S.get().settings.collapsedStages || []);
-
-    const wrap = document.createElement("div");
-    wrap.className = "stages-vertical";
-    S.STAGES.forEach((stage) => {
-      const list = byStage[stage.key];
-      const sec = document.createElement("section");
-      sec.className = "stage-section" + (stage.key === "postado" ? " is-done" : "")
-        + (collapsed.has(stage.key) ? " collapsed" : "") + (list.length === 0 ? " empty" : "");
-      sec.innerHTML = `
-        <button class="stage-header" type="button">
-          <span class="stage-caret">${I.caret}</span>
-          <span class="col__dot"></span>
-          <span class="stage-name">${stage.label}</span>
-          <span class="stage-hint">${stage.hint}</span>
-          <span class="col__count">${list.length}</span>
-        </button>
-        <div class="stage-grid" data-stage="${stage.key}"></div>`;
-      const grid = sec.querySelector(".stage-grid");
-      if (list.length === 0) grid.innerHTML = `<div class="stage-empty">Nada aqui ainda.</div>`;
-      else list.forEach((idea) => grid.appendChild(cardEl(idea)));
-      setupDrop(sec, stage.key); // solta em qualquer lugar da seção (inclusive recolhida)
-      sec.querySelector(".stage-header").addEventListener("click", () => toggleCollapse(stage.key));
-      wrap.appendChild(sec);
+    // Lista única. Em qualquer ordenação, o que já foi postado vai pro fim:
+    // não é mais trabalho pendente.
+    const modo = S.get().settings.sort || "manual";
+    const ideas = visibleIdeas().slice().sort((a, b) => {
+      const pa = a.stage === "postado" ? 1 : 0, pb = b.stage === "postado" ? 1 : 0;
+      if (pa !== pb) return pa - pb;
+      if (modo === "criacao") {
+        const d = (b.created || 0) - (a.created || 0);
+        if (d) return d;
+      } else if (modo === "status") {
+        // mais perto de pronto fica mais em cima
+        const d = (S.STAGE_PROGRESS[b.stage] || 0) - (S.STAGE_PROGRESS[a.stage] || 0);
+        if (d) return d;
+      }
+      return (a.order || 0) - (b.order || 0);
     });
-    boardHost.innerHTML = "";
-    boardHost.appendChild(wrap);
-  }
 
-  function toggleCollapse(key) {
-    const st = S.get().settings;
-    const set = new Set(st.collapsedStages || []);
-    set.has(key) ? set.delete(key) : set.add(key);
-    st.collapsedStages = Array.from(set);
-    S.save(false);
-    renderBoard();
+    const grid = document.createElement("div");
+    grid.className = "board-flat";
+    if (!ideas.length) {
+      grid.innerHTML = `<div class="stage-empty">Nada encontrado por aqui.</div>`;
+    } else {
+      ideas.forEach((idea) => grid.appendChild(cardEl(idea)));
+    }
+    setupDrop(grid);
+    boardHost.innerHTML = "";
+    boardHost.appendChild(grid);
   }
 
   function cardEl(idea) {
@@ -205,8 +228,9 @@
     const tags = (plats || mediaN)
       ? `<div class="card__tags">${plats}${mediaN ? `<span class="tag-media">${I.clip}${mediaN}</span>` : ""}</div>` : "";
 
+    const stage = S.STAGES.find((s) => s.key === idea.stage) || S.STAGES[0];
     const el = document.createElement("article");
-    el.className = "card";
+    el.className = "card stage-" + idea.stage + (idea.stage === "postado" ? " is-posted" : "");
     el.draggable = true;
     el.dataset.id = idea.id;
     el.innerHTML = `
@@ -214,61 +238,92 @@
       ${preview ? `<div class="card__hook">${esc(preview)}</div>` : ""}
       ${tags}
       <div class="card__meta">
-        <span class="mini-prog"><i style="width:${prog}%"></i></span>
-        <span class="mini-count">${prog}%</span>
-      </div>
-      <div class="card__foot">
-        <button class="move-btn" data-move="-1" title="Voltar etapa" ${idea.stage === S.STAGES[0].key ? "disabled" : ""}>${I.left}<span>Voltar</span></button>
-        <button class="move-btn move-fwd" data-move="1" title="Avançar etapa" ${idea.stage === "postado" ? "disabled" : ""}><span>Avançar</span>${I.right}</button>
+        <span class="mini-prog" title="Arraste para mudar a etapa"><i style="width:${prog}%"></i></span>
+        <span class="mini-stage">${esc(stage.label)}</span>
       </div>`;
 
-    el.addEventListener("click", (e) => {
-      if (e.target.closest(".move-btn")) return;
-      openDrawer(idea.id);
-    });
-    el.querySelectorAll(".move-btn").forEach((b) =>
-      b.addEventListener("click", (e) => { e.stopPropagation(); moveStage(idea.id, +b.dataset.move); }));
+    el.addEventListener("click", () => openDrawer(idea.id));
+    bindStageBar(el, idea);
 
     el.addEventListener("dragstart", (e) => {
-      dragId = idea.id; dragFromStage = idea.stage; el.classList.add("dragging");
-      $(".stages-vertical") && $(".stages-vertical").classList.add("dragging-active");
+      dragId = idea.id; el.classList.add("dragging");
       if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
     });
     el.addEventListener("dragend", () => {
-      dragId = null; dragFromStage = null; el.classList.remove("dragging");
-      $(".stages-vertical") && $(".stages-vertical").classList.remove("dragging-active");
-      $$(".drop-hint").forEach((b) => b.classList.remove("drop-hint"));
+      dragId = null; el.classList.remove("dragging");
     });
     return el;
   }
 
-  function setupDrop(sec, stageKey) {
-    const grid = sec.querySelector(".stage-grid");
-    sec.addEventListener("dragover", (e) => {
+  // A barra do card é um controle de 4 posições: arraste (ou toque) nela pra
+  // mudar a etapa sem precisar abrir o item.
+  function bindStageBar(el, idea) {
+    const bar = $(".mini-prog", el);
+    const fill = $("i", bar);
+    const label = $(".mini-stage", el);
+    let arrastando = false;
+    let alvo = S.STAGES.find((s) => s.key === idea.stage) || S.STAGES[0];
+
+    // faixas iguais: cada etapa ocupa o mesmo pedaço da barra, senão
+    // "Postado" (que começa em 90%) viraria um alvo minúsculo no celular
+    const etapaEmX = (clientX) => {
+      const b = bar.getBoundingClientRect();
+      const f = b.width ? (clientX - b.left) / b.width : 0;
+      const k = Math.floor(f * S.STAGES.length);
+      return S.STAGES[Math.max(0, Math.min(S.STAGES.length - 1, k))];
+    };
+    const pintar = (s) => {
+      el.className = "card stage-" + s.key + (s.key === "postado" ? " is-posted" : "") + " bar-live";
+      fill.style.width = (S.STAGE_PROGRESS[s.key] || 0) + "%";
+      label.textContent = s.label;
+    };
+
+    bar.addEventListener("pointerdown", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      arrastando = true;
+      el.draggable = false;          // não deixa o arraste de reordenar começar
+      bar.classList.add("is-live");
+      try { bar.setPointerCapture(e.pointerId); } catch (x) {}
+      alvo = etapaEmX(e.clientX); pintar(alvo);
+    });
+    bar.addEventListener("pointermove", (e) => {
+      if (!arrastando) return;
+      const s = etapaEmX(e.clientX);
+      if (s.key !== alvo.key) { alvo = s; pintar(s); }
+    });
+    const soltar = (e) => {
+      if (!arrastando) return;
+      arrastando = false;
+      el.draggable = true;
+      bar.classList.remove("is-live");
+      try { bar.releasePointerCapture(e.pointerId); } catch (x) {}
+      if (alvo.key === idea.stage) { el.classList.remove("bar-live"); return; }
+      S.updateIdea(idea.id, { stage: alvo.key });
+      if (alvo.key === "postado") toast("No ar! Bora pra próxima 🎉");
+    };
+    bar.addEventListener("pointerup", soltar);
+    bar.addEventListener("pointercancel", soltar);
+    bar.addEventListener("click", (e) => e.stopPropagation());   // não abre a edição
+  }
+
+  // Uma lista só: arrastar reordena e passa a ordenação para "manual".
+  function setupDrop(grid) {
+    grid.addEventListener("dragover", (e) => {
       if (!dragId) return;
       e.preventDefault();
-      if (stageKey === dragFromStage) {
-        const dragging = boardHost.querySelector(".card.dragging");
-        if (dragging && grid) {
-          const ref = gridDragAfter(grid, e.clientX, e.clientY);
-          if (ref == null) grid.appendChild(dragging);
-          else if (ref !== dragging) grid.insertBefore(dragging, ref);
-        }
-        sec.classList.remove("drop-hint");
-      } else {
-        sec.classList.add("drop-hint");
-      }
+      const dragging = grid.querySelector(".card.dragging");
+      if (!dragging) return;
+      const ref = gridDragAfter(grid, e.clientX, e.clientY);
+      if (ref == null) grid.appendChild(dragging);
+      else if (ref !== dragging) grid.insertBefore(dragging, ref);
     });
-    sec.addEventListener("dragleave", (e) => { if (!sec.contains(e.relatedTarget)) sec.classList.remove("drop-hint"); });
-    sec.addEventListener("drop", (e) => {
-      e.preventDefault(); sec.classList.remove("drop-hint");
+    grid.addEventListener("drop", (e) => {
+      e.preventDefault();
       if (!dragId) return;
-      if (stageKey === dragFromStage) {
-        const ids = $$(".card", grid).map((c) => c.dataset.id);
-        S.reorderIdeas(ids);
-      } else {
-        S.moveIdeaToStageEnd(dragId, stageKey);
-      }
+      // arrastar sempre vale: congela a ordem que está na tela e volta pro manual
+      S.setSort("manual");
+      S.reorderIdeas($$(".card", grid).map((c) => c.dataset.id));
+      atualizarBotaoOrdem();
     });
   }
 
@@ -286,16 +341,6 @@
     }
     if (!best) return null;
     return before ? best : best.nextElementSibling;
-  }
-
-  function moveStage(id, dir) {
-    const idea = S.getIdea(id); if (!idea) return;
-    const idx = S.STAGES.findIndex((s) => s.key === idea.stage);
-    const ni = Math.max(0, Math.min(S.STAGES.length - 1, idx + dir));
-    if (ni === idx) return;
-    const newStage = S.STAGES[ni].key;
-    S.updateIdea(id, { stage: newStage });
-    if (newStage === "postado") toast("No ar! Bora pra próxima 🎉");
   }
 
   // ============================================================
@@ -346,7 +391,10 @@
         <button class="icon-btn" id="dwClose" title="Fechar">${I.x}</button>
       </div>
       <div class="drawer__body">
-        <textarea class="drawer__title-input" id="dwTitle" rows="1" placeholder="Título da ideia...">${esc(idea.title)}</textarea>
+        <div class="drawer__title">
+          <textarea class="drawer__title-input" id="dwTitle" rows="1" placeholder="Título da ideia...">${esc(idea.title)}</textarea>
+          <div class="drawer__created">Criada em ${created.getDate()} ${MESES[created.getMonth()]} ${created.getFullYear()}</div>
+        </div>
 
         <div class="field">
           <label>Etapa</label>
@@ -377,7 +425,7 @@
       </div>
       <div class="drawer__foot">
         <button class="btn-danger" id="dwDelete">${I.trash} Excluir</button>
-        <span class="foot-meta">Criada em ${created.getDate()} ${MESES[created.getMonth()]} ${created.getFullYear()}</span>
+        <button class="btn-save" id="dwSave">${I.check} Salvar</button>
       </div>`;
   }
 
@@ -394,7 +442,9 @@
 
     g("#dwStages").addEventListener("click", (e) => {
       const b = e.target.closest(".stage-pick"); if (!b) return;
+      const antes = (S.getIdea(id) || {}).stage;
       S.updateIdea(id, { stage: b.dataset.stage });
+      if (b.dataset.stage === "postado" && antes !== "postado") toast("No ar! Bora pra próxima 🎉");
       $$(".stage-pick", drawer).forEach((x) => x.classList.toggle("is-active", x === b));
       const p = S.progressOf(S.getIdea(id));
       g("#dwProgBar").style.width = p + "%"; g("#dwProgPct").textContent = p + "%";
@@ -431,6 +481,14 @@
       inp.click();
     });
 
+    // Tudo já é salvo enquanto você digita; o botão fecha e confirma.
+    g("#dwSave").addEventListener("click", () => {
+      S.updateIdea(id, { title: title.value, script: script.value });
+      closeDrawer();
+      toast("Salvo ✨");
+      Sync.pushNow();
+    });
+
     g("#dwDelete").addEventListener("click", () => {
       confirmModal("Excluir esta ideia?", "Isso também remove as mídias dela deste aparelho e do seu Drive. Não tem como voltar atrás.", "Excluir", async () => {
         await deleteIdeaFully(id);
@@ -447,7 +505,9 @@
     const order = (idea.media.reduce((mx, x) => Math.max(mx, x.order || 0), 0)) + 1;
     idea.media.push({ id: mediaId, kind, mime: mime || blob.type || "", name: name || "", size: blob.size, order, driveFileId: null });
     S.updateIdea(id, { media: idea.media });
-    if (D.isConnected()) uploadMediaBg(id, mediaId, blob, name || kind, mime || blob.type).catch(() => {});
+    if (D.isConnected() && S.get().settings.uploadMedia !== false) {
+      uploadMediaBg(id, mediaId, blob, name || kind, mime || blob.type).catch(() => {});
+    }
   }
 
   // sobe uma mídia pra subpasta da ideia no Drive
@@ -464,7 +524,18 @@
       idea = S.getIdea(ideaId); if (!idea) return;
       const m = idea.media.find((x) => x.id === mediaId);
       if (m) { m.driveFileId = fileId; S.updateIdea(ideaId, { media: idea.media }); }
-    } catch (e) { /* fica só local; tenta de novo numa próxima */ }
+    } catch (e) {
+      // fica só local e tenta de novo depois. Se o Drive encheu, a pessoa
+      // precisa saber — senão parece que sincronizou e não foi.
+      if (e && e.quotaExceeded) avisarDriveCheio();
+    }
+  }
+
+  let jaAvisouCheio = false;
+  function avisarDriveCheio() {
+    if (jaAvisouCheio) return;
+    jaAvisouCheio = true;
+    toast("Seu Google Drive está cheio — as mídias ficaram só neste aparelho", true);
   }
 
   function extFor(mime) {
@@ -486,6 +557,7 @@
   // sobe pro Drive as mídias que ainda não têm cópia lá (ex: gravadas offline ou antes de conectar)
   async function syncPendingMedia() {
     if (!D.isConnected()) return;
+    if (S.get().settings.uploadMedia === false) return;
     for (const idea of S.get().ideas.slice()) {
       for (const m of (idea.media || []).slice()) {
         if (m.driveFileId) continue;
@@ -690,6 +762,109 @@
     host.querySelector('[data-x="ok"]').addEventListener("click", () => { close(); onOk && onOk(); });
   }
 
+  // ---- conflito de título ao mesclar (mesma ideia criada em dois aparelhos) ----
+  const fmtWhen = (ts) => {
+    const d = new Date(ts || 0);
+    return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}, ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+
+  function askConflicts(conflicts) {
+    return new Promise((resolve) => {
+      const choices = new Map();
+      let applyAll = null;
+      let idx = 0;
+      const step = () => {
+        if (idx >= conflicts.length) return resolve(choices);
+        const c = conflicts[idx++];
+        if (applyAll) { choices.set(c.remote.id, applyAll); return step(); }
+        conflictModal(c, idx, conflicts.length, (choice, all) => {
+          choices.set(c.remote.id, choice);
+          if (all) applyAll = choice;
+          step();
+        });
+      };
+      step();
+    });
+  }
+
+  function conflictModal(c, n, total, done) {
+    const side = (idea, label, tag) => {
+      const preview = (idea.script || "").replace(/\s+/g, " ").trim().slice(0, 160);
+      const stage = S.STAGES.find((s) => s.key === idea.stage);
+      return `
+        <div class="conf-side">
+          <div class="conf-side__top"><b>${esc(label)}</b><span class="conf-tag">${esc(tag)}</span></div>
+          <div class="conf-when">Alterada em ${fmtWhen(idea.updated)}</div>
+          <div class="conf-line">Etapa: ${esc(stage ? stage.label : idea.stage)}${(idea.media || []).length ? ` · ${(idea.media || []).length} mídia(s)` : ""}</div>
+          <div class="conf-prev">${preview ? esc(preview) + ((idea.script || "").length > 160 ? "…" : "") : "<i>Sem roteiro escrito</i>"}</div>
+        </div>`;
+    };
+    const newerIsRemote = (c.remote.updated || 0) >= (c.local.updated || 0);
+    const host = document.createElement("div");
+    host.className = "modal-center";
+    host.innerHTML = `
+      <div class="scrim open" style="position:absolute"></div>
+      <div class="modal-card conflict-card">
+        <h3>Mesma ideia nos dois lados</h3>
+        <p class="conf-sub">Existe uma ideia chamada <b>“${esc(c.local.title)}”</b> aqui e no Drive, mas são cópias separadas. Qual você quer manter?${total > 1 ? ` <span class="conf-count">${n} de ${total}</span>` : ""}</p>
+        <div class="conf-sides">
+          ${side(c.local, "Neste aparelho", newerIsRemote ? "" : "mais atual")}
+          ${side(c.remote, "No Drive", newerIsRemote ? "mais atual" : "")}
+        </div>
+        <div class="conf-choices">
+          <button class="primary" data-c="newer">Manter a mais atual</button>
+          <button data-c="local">Manter a deste aparelho</button>
+          <button data-c="remote">Manter a do Drive</button>
+          <button data-c="both">Ficar com as duas</button>
+        </div>
+        <label class="conf-all"><input type="checkbox" id="confAll"> Fazer isso com todos os casos</label>
+      </div>`;
+    document.body.appendChild(host);
+    host.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-c]"); if (!b) return;
+      const all = host.querySelector("#confAll").checked;
+      host.remove();
+      done(b.dataset.c, all);
+    });
+  }
+
+  // ---- espaço do Drive ----
+  const fmtGB = (b) => {
+    if (b == null) return "—";
+    const gb = b / 1073741824;
+    if (gb >= 100) return Math.round(gb) + " GB";
+    // até 100 GB mantemos uma casa: "15 GB de 15 GB" com 400 MB livres confunde
+    if (gb >= 1) return gb.toFixed(1).replace(".", ",") + " GB";
+    const mb = b / 1048576;
+    return (mb >= 10 ? Math.round(mb) : mb.toFixed(1).replace(".", ",")) + " MB";
+  };
+
+  async function renderQuota(box) {
+    const a = await D.about();
+    box.classList.remove("is-loading");
+    if (!a) { box.remove(); return; }        // o Google não deixou ler: melhor não mostrar nada
+    if (a.limite == null) {
+      box.innerHTML = `<div class="quota__top"><span>Espaço no seu Google Drive</span><b>sem limite</b></div>
+        <div class="quota__note">Esta conta não tem cota definida, então o espaço não deve ser problema.</div>`;
+      return;
+    }
+    const pct = Math.min(100, Math.round((a.usado / a.limite) * 100));
+    const livre = Math.max(0, a.limite - a.usado);
+    const nivel = pct >= 95 ? "is-full" : pct >= 85 ? "is-warn" : "";
+    box.className = "quota " + nivel;
+    box.innerHTML = `
+      <div class="quota__top"><span>Espaço no seu Google Drive</span><b>${fmtGB(a.usado)} de ${fmtGB(a.limite)}</b></div>
+      <div class="quota__bar"><i style="width:${pct}%"></i></div>
+      <div class="quota__note">
+        ${pct >= 95
+          ? `Só restam <b>${fmtGB(livre)}</b>. Novos áudios e vídeos podem falhar ao subir — eles continuam salvos aqui no aparelho, mas não vão pros outros.`
+          : pct >= 85
+          ? `Restam <b>${fmtGB(livre)}</b>. Vale liberar espaço antes que aperte.`
+          : `Livres: <b>${fmtGB(livre)}</b>. Suas ideias em texto ocupam alguns KB; o que pesa mesmo são os áudios e vídeos.`}
+        ${a.lixeira > 52428800 ? `<br>A lixeira do Drive está com ${fmtGB(a.lixeira)} — esvaziá-la devolve esse espaço.` : ""}
+      </div>`;
+  }
+
   function syncModal() {
     const host = document.createElement("div");
     host.className = "modal-center";
@@ -706,23 +881,40 @@
             <span class="sync-account__dot ${active ? "is-active" : ""}"></span>
             <div><b>${active ? "Google Drive sincronizado" : "Google Drive vinculado"}</b><small>${esc(account || "Conta Google")}</small></div>
           </div>
-          <p>Suas ideias continuam neste aparelho e também podem ser atualizadas pelo seu Google Drive.</p>
+          <p>Suas ideias ficam salvas neste aparelho <b>e</b> numa cópia dentro do seu Google Drive. É essa cópia que mantém o celular, o computador e qualquer outro aparelho com exatamente o mesmo conteúdo: entrando com esta mesma conta em cada um, o que você escreve num aparece nos outros em segundos.</p>
+          <div id="cmQuota" class="quota is-loading">Vendo quanto espaço tem no seu Drive...</div>
+          <label class="opt-row">
+            <input type="checkbox" id="cmMedia" ${S.get().settings.uploadMedia === false ? "" : "checked"}>
+            <span><b>Enviar áudios, vídeos e fotos também</b><small>Desligado, as gravações ficam só no aparelho onde foram feitas e não ocupam espaço no Drive. O texto continua sincronizando.</small></span>
+          </label>
           <div class="sync-actions">
             <button class="g-btn" id="cmSync">${I.refresh} Atualizar agora</button>
             <button class="g-btn" id="cmSwitch">${I.google} Trocar de conta</button>
             <button class="g-btn danger-outline" id="cmDisconnect">${I.off} Desconectar</button>
           </div>
         ` : `
-          <p>O Faísca funciona normalmente sem conta. Suas ideias ficam salvas somente neste aparelho.</p>
+          <p>O Faísca funciona normalmente sem conta: suas ideias ficam salvas só neste aparelho.</p>
+          <p>Conectando o Google, ele passa a guardar uma cópia das suas ideias <b>no seu próprio Google Drive</b>. Serve pra usar o mesmo conteúdo em vários aparelhos — você entra com a mesma conta no celular e no computador, e os dois passam a mostrar e atualizar as mesmas ideias, cada um se atualizando sozinho quando o outro muda alguma coisa.</p>
           ${configured ? `<button class="g-btn" id="cmConnect">${I.google} Sincronizar com o Google</button>` : `<div class="note">A sincronização com o Drive ainda não foi configurada.</div>`}
         `}
-        <div class="note" style="margin-top:14px">Cada pessoa usa o próprio Drive. Outros usuários não veem suas ideias.</div>
+        <div class="note" style="margin-top:14px">É o <b>seu</b> Drive, não um servidor nosso. O app só enxerga a pasta <b>Faísca</b> que ele mesmo cria — o resto do seu Drive continua invisível pra ele, e ninguém além de você vê suas ideias.</div>
         <div class="row-btns"><button data-x="cancel">Fechar</button></div>
       </div>`;
     document.body.appendChild(host);
     const close = () => host.remove();
     host.querySelector('[data-x="cancel"]').addEventListener("click", close);
     host.querySelector(".scrim").addEventListener("click", close);
+
+    const optMedia = host.querySelector("#cmMedia");
+    if (optMedia) optMedia.addEventListener("change", () => {
+      S.setUploadMedia(optMedia.checked);
+      if (optMedia.checked) { toast("As mídias vão subir na próxima sincronização"); syncPendingMedia().catch(() => {}); }
+      else toast("As mídias vão ficar só neste aparelho");
+    });
+
+    const quotaBox = host.querySelector("#cmQuota");
+    if (quotaBox) renderQuota(quotaBox);
+
     const cb = host.querySelector("#cmConnect");
     if (cb) cb.addEventListener("click", async () => { close(); await Sync.connect(); });
     const sync = host.querySelector("#cmSync");
@@ -837,6 +1029,133 @@
   //  SYNC (Google Drive)
   // ============================================================
   let suppressPush = false;
+  let activeUntil = 0;  // janela de "conversa rápida" logo após qualquer mudança
+
+  // Uma operação de sincronização por vez: sem isso, dois ciclos simultâneos
+  // podem perguntar a mesma coisa duas vezes ou gravar um por cima do outro.
+  let syncQueue = Promise.resolve();
+  function serial(fn) {
+    const run = syncQueue.then(fn, fn);
+    syncQueue = run.then(() => {}, () => {});
+    return run;
+  }
+  let lastStatus = null;
+
+  function markActive() { activeUntil = Date.now() + 90000; }
+
+  // ---- mesclagem com pergunta em caso de título repetido ----
+  const normTitle = (t) => String(t || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+  // Procura ideias diferentes (ids distintos) que tenham o mesmo título:
+  // é o caso clássico de "criei a mesma coisa nos dois aparelhos".
+  function findTitleConflicts(remoteObj) {
+    const remoteData = (remoteObj && remoteObj.data) || remoteObj || {};
+    const remoteIdeas = Array.isArray(remoteData.ideas) ? remoteData.ideas : [];
+    if (!remoteIdeas.length) return [];
+    const localIdeas = S.get().ideas;
+    const remoteIds = new Set(remoteIdeas.map((i) => i.id));
+    const localIds = new Set(localIdeas.map((i) => i.id));
+    const deleted = new Set((S.get().tombstones || []).map((t) => t.id));
+
+    const byTitle = new Map();
+    for (const l of localIdeas) {
+      if (remoteIds.has(l.id)) continue;       // é o mesmo item, a mesclagem normal resolve
+      const k = normTitle(l.title); if (!k) continue;
+      if (!byTitle.has(k)) byTitle.set(k, []);
+      byTitle.get(k).push(l);
+    }
+    const out = [];
+    for (const r of remoteIdeas) {
+      if (localIds.has(r.id) || deleted.has(r.id)) continue;
+      const k = normTitle(r.title); if (!k) continue;
+      const pool = byTitle.get(k);
+      if (pool && pool.length) out.push({ local: pool.shift(), remote: r });
+    }
+    return out;
+  }
+
+  // Emparelha as mídias das duas cópias. O id é sorteado em cada aparelho,
+  // então quem reconhece o mesmo arquivo é tipo + nome + tamanho em bytes.
+  // Devolve os pares, ou null se as listas não baterem.
+  function pairMedia(a, b) {
+    const A = a.media || [], B = b.media || [];
+    if (A.length !== B.length) return null;
+    const key = (m) => [m.kind || "", String(m.name || "").trim().toLowerCase(), m.size || 0].join(" ");
+    const pool = new Map();
+    for (const m of B) { const k = key(m); if (!pool.has(k)) pool.set(k, []); pool.get(k).push(m); }
+    const pairs = [];
+    for (const m of A) {
+      const list = pool.get(key(m));
+      if (!list || !list.length) return null;
+      pairs.push([m, list.shift()]);
+    }
+    return pairs;
+  }
+
+  // Duas cópias com o mesmo conteúdo não têm o que decidir: juntamos as duas
+  // em uma só, sem perguntar nada. Devolve os pares de mídia, ou null.
+  function sameContent(a, b) {
+    const sig = (i) => JSON.stringify([
+      normTitle(i.title), String(i.script || "").trim(), i.stage, (i.platforms || []).slice().sort(),
+    ]);
+    if (sig(a) !== sig(b)) return null;
+    return pairMedia(a, b);
+  }
+
+  // Aplica as escolhas: tira do pacote remoto o que foi recusado e
+  // apaga daqui o que a pessoa preferiu substituir pela versão do Drive.
+  async function applyChoices(remoteObj, conflicts, choices) {
+    const remoteData = (remoteObj && remoteObj.data) || remoteObj;
+    const drop = new Set();
+    for (const c of conflicts) {
+      let choice = choices.get(c.remote.id) || "both";
+      if (choice === "newer") choice = (c.remote.updated || 0) >= (c.local.updated || 0) ? "remote" : "local";
+      if (choice === "local") {
+        drop.add(c.remote.id);
+        S.addTombstone(c.remote.id);           // some também do Drive na próxima gravação
+      } else if (choice === "remote") {
+        // Cópias iguais: os arquivos daqui continuam valendo para a versão que
+        // ficou. Repassamos o blob para o id dela em vez de jogar fora e ter
+        // que baixar tudo do Drive de novo (ou perder o que ainda não subiu).
+        for (const [meu, dele] of (c.pairs || [])) {
+          try {
+            if (await M.has(dele.id)) continue;
+            const blob = await M.get(meu.id);
+            if (blob) await M.put(dele.id, blob, { ideaId: c.remote.id, kind: dele.kind, name: dele.name });
+          } catch (e) {}
+        }
+        const manter = new Set((c.pairs || []).map((p) => p[1].id));
+        await M.delMany((c.local.media || []).map((m) => m.id).filter((id) => !manter.has(id))).catch(() => {});
+        S.deleteIdea(c.local.id);
+      }
+    }
+    if (drop.size) remoteData.ideas = remoteData.ideas.filter((i) => !drop.has(i.id));
+    return remoteObj;
+  }
+
+  async function applyRemote(remoteObj) {
+    if (!remoteObj) return false;
+    const conflicts = findTitleConflicts(remoteObj);
+    if (conflicts.length) {
+      const choices = new Map();
+      const perguntar = [];
+      for (const c of conflicts) {
+        const pares = sameContent(c.local, c.remote);
+        if (pares) { c.pairs = pares; choices.set(c.remote.id, "newer"); }
+        else perguntar.push(c);
+      }
+      if (perguntar.length) {
+        const respostas = await askConflicts(perguntar);
+        respostas.forEach((v, k) => choices.set(k, v));
+      }
+      remoteObj = await applyChoices(remoteObj, conflicts, choices);
+    }
+    suppressPush = true;
+    let changed = false;
+    try { changed = S.importObject(remoteObj); } finally { suppressPush = false; }
+    return changed;
+  }
+
   const Sync = {
     async connect(options) {
       try {
@@ -848,34 +1167,58 @@
       }
       catch (e) { this.setStatus(D.wasConnected() ? "on" : "off"); toast(e && e.message ? e.message : "Não deu pra conectar", true); }
     },
-    async full(manual) {
-      if (!D.isConnected()) { if (manual) toast("Conecte o Drive primeiro", true); return false; }
-      try {
-        this.setStatus("syncing");
-        const remote = await D.pull();
-        if (remote) { suppressPush = true; S.importObject(remote); suppressPush = false; }
-        await D.push(S.exportObject());
-        this.setStatus("on"); if (manual) toast("Sincronizado ✨");
-        syncPendingMedia().catch(() => {});
-        return true;
-      } catch (e) { suppressPush = false; this.setStatus("error"); toast("Falha ao sincronizar", true); return false; }
-    },
-    _push: debounce(async function () {
-      if (!D.isConnected()) return;
-      try {
-        Sync.setStatus("syncing");
-        const remote = await D.pull();
-        if (remote) { suppressPush = true; S.importObject(remote); suppressPush = false; }
-        await D.push(S.exportObject());
-        Sync.setStatus("on");
+    full(manual) {
+      if (!D.isConnected()) { if (manual) toast("Conecte o Drive primeiro", true); return Promise.resolve(false); }
+      return serial(async () => {
+        try {
+          Sync.setStatus("syncing");
+          D.forgetStamp();
+          const remote = await D.pull();
+          const changed = await applyRemote(remote);
+          await D.push(S.exportObject());
+          Sync.setStatus("on");
+          if (manual) toast(changed ? "Sincronizado ✨" : "Já está tudo em dia");
+          markActive();
+          syncPendingMedia().catch(() => {});
+          return true;
+        } catch (e) {
+        suppressPush = false; Sync.setStatus("error");
+        if (e && e.quotaExceeded) toast("Seu Google Drive está cheio — libere espaço para sincronizar", true);
+        else toast("Falha ao sincronizar", true);
+        return false;
       }
-      catch (e) { suppressPush = false; Sync.setStatus("error"); }
-    }, 1600),
-    pushSoon() { if (D.isConnected() && !suppressPush) this._push(); },
-    async pull() {
-      if (!D.isConnected()) return;
-      try { this.setStatus("syncing"); const r = await D.pull(); if (r) { suppressPush = true; S.importObject(r); suppressPush = false; } this.setStatus("on"); }
-      catch (e) { suppressPush = false; this.setStatus(D.isConnected() ? "on" : "off"); }
+      });
+    },
+    _push: debounce(function () { Sync.pushNow(); }, 1200),
+    pushNow() {
+      if (!D.isConnected() || suppressPush) return Promise.resolve();
+      return serial(async () => {
+        try {
+          const r = await D.pullIfChanged();
+          if (r.changed) await applyRemote(r.data);
+          await D.push(S.exportObject());
+          Sync.setStatus("on");
+          markActive();
+        }
+        catch (e) { suppressPush = false; Sync.setStatus("error"); }
+      });
+    },
+    pushSoon() { if (D.isConnected() && !suppressPush) { markActive(); this._push(); } },
+    // silent: não mexe no indicador nem avisa nada quando não há novidade
+    pull(opts) {
+      const silent = !!(opts && opts.silent);
+      if (!D.isConnected()) return Promise.resolve(false);
+      return serial(async () => {
+        try {
+          if (!silent) Sync.setStatus("syncing");
+          const r = await D.pullIfChanged();
+          let changed = false;
+          if (r.changed) { changed = await applyRemote(r.data); if (changed) markActive(); }
+          Sync.setStatus("on");
+          return changed;
+        }
+        catch (e) { suppressPush = false; Sync.setStatus(D.isConnected() ? "on" : "off"); return false; }
+      });
     },
     async ensureReady(manual) {
       if (D.isConnected()) return true;
@@ -887,6 +1230,8 @@
     setStatus(s) {
       const pill = $("#sync"); const label = $("#syncLabel");
       if (!pill || !label) return;
+      if (s === lastStatus) return;   // nada de piscar o indicador à toa
+      lastStatus = s;
       pill.classList.remove("is-on", "is-syncing", "is-error");
       if (s === "on") { pill.classList.add("is-on"); label.textContent = "Sincronizado"; }
       else if (s === "syncing") { pill.classList.add("is-syncing"); label.textContent = "Sincronizando"; }
@@ -913,41 +1258,79 @@
   // ---------- subscription ----------
   S.subscribe(() => { if (!boardFrozen) renderBoard(); Sync.pushSoon(); });
 
+  // ---------- checagem automática (leve) ----------
+  // Cada ciclo pergunta ao Drive só a "versão" do arquivo (uns poucos bytes).
+  // O conteúdo só é baixado quando alguém realmente mexeu em outro aparelho.
   let lastPull = 0;
-  async function maybePull() {
-    if (Date.now() - lastPull < 8000) return;
-    if (!(await Sync.ensureReady(false))) return;
+  let pollTimer = null;
+  let polling = false;
+
+  function pollDelay() {
+    if (document.hidden || !D.isConnected()) return 60000;
+    return Date.now() < activeUntil ? 4000 : 15000;   // rápido logo após mudanças, calmo depois
+  }
+  function schedulePoll() {
+    clearTimeout(pollTimer);
+    pollTimer = setTimeout(async () => { await maybePull(); schedulePoll(); }, pollDelay());
+  }
+  async function maybePull(force) {
+    if (polling) return false;
+    if (!force && (document.hidden || Date.now() - lastPull < 2500)) return false;
+    if (!(await Sync.ensureReady(false))) return false;
+    polling = true;
     lastPull = Date.now();
-    Sync.pull();
+    try { return await Sync.pull({ silent: true }); }
+    finally { polling = false; }
   }
   async function refreshNow(manual) {
     if (!(await Sync.ensureReady(manual))) return;
     lastPull = Date.now();
-    await Sync.pull();
-    if (manual) toast("Atualizado");
+    const changed = await Sync.pull({ silent: !manual });
+    if (manual) toast(changed ? "Atualizado ✨" : "Já está tudo em dia");
   }
-  window.addEventListener("focus", maybePull);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) maybePull(); });
-  setInterval(() => {
-    if (!document.hidden) maybePull();
-  }, 20000);
+  window.addEventListener("focus", () => maybePull(true));
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { maybePull(true); schedulePoll(); } });
+  schedulePoll();
+
+  // outros dispositivos: o ciclo acima resolve. Outras abas/janelas do mesmo
+  // aparelho: o evento de storage avisa na hora, sem custo nenhum de rede.
+  window.addEventListener("storage", (event) => {
+    if (event.key !== S.KEY) return;
+    const sig = S.signature();
+    S.load();
+    if (S.signature() !== sig && !boardFrozen) renderBoard();
+  });
+
   document.addEventListener("keydown", (e) => {
     if (e.key !== "F5") return;
     e.preventDefault();
     refreshNow(true);
   });
 
+  // "puxar pra atualizar" — só na tela do quadro, nunca com a edição aberta
   let pullStartY = null;
   let pullReady = false;
+  function gestureBlocked(target) {
+    if (openId || document.querySelector(".modal-center")) return true;
+    if (target && target.closest && target.closest(".mini-prog")) return true;  // arrastando a etapa
+    // ignora arrastes que começam dentro de algo que tem rolagem própria
+    for (let el = target; el && el !== document.body; el = el.parentElement) {
+      if (el.scrollHeight > el.clientHeight + 2) {
+        const ov = getComputedStyle(el).overflowY;
+        if (ov === "auto" || ov === "scroll") return true;
+      }
+    }
+    return false;
+  }
   window.addEventListener("touchstart", (e) => {
-    if (window.scrollY <= 0 && e.touches.length === 1) {
+    pullStartY = null; pullReady = false;
+    if (window.scrollY <= 0 && e.touches.length === 1 && !gestureBlocked(e.target)) {
       pullStartY = e.touches[0].clientY;
-      pullReady = false;
     }
   }, { passive: true });
   window.addEventListener("touchmove", (e) => {
     if (pullStartY == null || e.touches.length !== 1) return;
-    pullReady = e.touches[0].clientY - pullStartY > 90 && window.scrollY <= 0;
+    pullReady = e.touches[0].clientY - pullStartY > 120 && window.scrollY <= 0;
   }, { passive: true });
   window.addEventListener("touchend", () => {
     if (pullReady) refreshNow(true);
@@ -961,6 +1344,7 @@
   async function boot() {
     S.load();
     applyTheme();
+    atualizarBotaoOrdem();
     if (M) { try { await M.init(); await migrateOldMedia(); } catch (e) {} }
     renderBoard();
     if (D.available()) {
@@ -969,7 +1353,7 @@
       if (restored) Sync.pull();
     } else Sync.setStatus("local");
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("./service-worker.js").catch(() => {});
-    document.documentElement.dataset.appVersion = "27";
+    document.documentElement.dataset.appVersion = "35";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia

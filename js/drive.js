@@ -24,6 +24,11 @@
   let pendingResolve = null;
   let pendingReject = null;
   let gisReady = false;
+  // "carimbo" da última versão que já conhecemos do arquivo no Drive.
+  // Serve para checar mudanças com uma chamada minúscula, sem baixar tudo.
+  let lastStamp = null;
+  let folderChecked = false;
+  let aboutCache = null;
 
   const available = () => !!(CFG.GOOGLE_CLIENT_ID && CFG.GOOGLE_CLIENT_ID.trim());
 
@@ -115,8 +120,11 @@
 
   async function findFileId() {
     const cached = localStorage.getItem(LS_FILE);
+    if (cached && folderChecked) return cached;
     const appFolder = await ensureAppFolder();
     if (cached) {
+      // só conferimos a pasta uma vez por sessão (evita chamadas à toa a cada checagem)
+      folderChecked = true;
       await moveFileToFolder(cached, appFolder).catch(() => {});
       return cached;
     }
@@ -126,6 +134,7 @@
     const data = await res.json();
     if (data.files && data.files.length) {
       localStorage.setItem(LS_FILE, data.files[0].id);
+      folderChecked = true;
       return data.files[0].id;
     }
     const oldQ = encodeURIComponent(`name='${CFG.DRIVE_FILE_NAME}' and trashed=false`);
@@ -136,6 +145,7 @@
       const id = oldData.files[0].id;
       await moveFileToFolder(id, appFolder).catch(() => {});
       localStorage.setItem(LS_FILE, id);
+      folderChecked = true;
       return id;
     }
     return null;
@@ -151,26 +161,53 @@
       `\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n` +
       JSON.stringify(contentObj) +
       `\r\n--${boundary}--`;
-    const res = await api("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
+    const res = await api("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,version,modifiedTime", {
       method: "POST",
       headers: { "Content-Type": `multipart/related; boundary=${boundary}` },
       body,
     });
-    if (!res.ok) throw new Error("Não consegui criar o arquivo no Drive.");
+    if (!res.ok) throw await driveError(res, "Não consegui criar o arquivo no Drive.");
     const data = await res.json();
     localStorage.setItem(LS_FILE, data.id);
+    folderChecked = true;
+    lastStamp = stampOf(data);
     return data.id;
   }
 
   async function updateFile(fileId, contentObj) {
-    const res = await api(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+    const res = await api(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media&fields=id,version,modifiedTime`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(contentObj),
     });
     if (res.status === 404) { localStorage.removeItem(LS_FILE); return null; }
-    if (!res.ok) throw new Error("Não consegui salvar no Drive.");
+    if (!res.ok) throw await driveError(res, "Não consegui salvar no Drive.");
+    // guardamos a versão que nós mesmos acabamos de gravar, assim a próxima
+    // checagem não confunde a nossa gravação com mudança de outro aparelho
+    try { lastStamp = stampOf(await res.json()); } catch (e) { lastStamp = null; }
     return fileId;
+  }
+
+  // Transforma um erro da API num Error com a causa identificada — o caso que
+  // mais importa é o Drive cheio, que precisa de um aviso claro pra pessoa.
+  async function driveError(res, fallback) {
+    let reason = "", msg = "";
+    try {
+      const j = await res.clone().json();
+      reason = (((j.error || {}).errors || [])[0] || {}).reason || "";
+      msg = (j.error || {}).message || "";
+    } catch (e) {}
+    const err = new Error(msg || fallback);
+    err.status = res.status;
+    err.reason = reason;
+    err.quotaExceeded = res.status === 403 && /storageQuotaExceeded|quotaExceeded/i.test(reason + " " + msg);
+    return err;
+  }
+
+  function stampOf(meta) {
+    if (!meta) return null;
+    const s = meta.version || meta.modifiedTime;
+    return s ? String(s) : null;
   }
 
   // ---- API pública ----
@@ -211,6 +248,7 @@
     disconnect() {
       try { if (accessToken && window.google) google.accounts.oauth2.revoke(accessToken, () => {}); } catch (e) {}
       accessToken = null; tokenExpiry = 0;
+      lastStamp = null; folderChecked = false; aboutCache = null;
       localStorage.removeItem(LS_TOKEN);
       localStorage.removeItem(LS_TOKEN_EXPIRY);
       localStorage.removeItem(LS_FLAG);
@@ -232,6 +270,23 @@
       try { return JSON.parse(text); } catch (e) { return null; }
     },
 
+    // Checagem leve: pergunta só a versão do arquivo (poucos bytes).
+    // Só baixa o conteúdo inteiro quando alguém realmente mexeu.
+    async pullIfChanged() {
+      const id = await findFileId();
+      if (!id) return { changed: false, data: null };
+      const res = await api(`https://www.googleapis.com/drive/v3/files/${id}?fields=version,modifiedTime`);
+      if (res.status === 404) { localStorage.removeItem(LS_FILE); lastStamp = null; return { changed: false, data: null }; }
+      if (!res.ok) throw new Error("Não consegui checar o Drive.");
+      const stamp = stampOf(await res.json());
+      if (stamp && stamp === lastStamp) return { changed: false, data: null };
+      const data = await this.pull();
+      lastStamp = stamp;
+      return { changed: true, data };
+    },
+
+    forgetStamp() { lastStamp = null; },
+
     // Grava o objeto no Drive (cria o arquivo se preciso)
     async push(obj) {
       let id = await findFileId();
@@ -252,8 +307,31 @@
       const res = await api(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id`, {
         method: "POST", headers: { "Content-Type": `multipart/related; boundary=${boundary}` }, body,
       });
-      if (!res.ok) throw new Error("Falha ao enviar mídia ao Drive.");
+      if (!res.ok) throw await driveError(res, "Falha ao enviar mídia ao Drive.");
       return (await res.json()).id;
+    },
+
+    // Espaço da conta + quem está logado. O escopo drive.file já permite ler
+    // isso; se o Google recusar, devolvemos null e a tela simplesmente omite.
+    async about(force) {
+      if (!force && aboutCache && Date.now() - aboutCache.at < 120000) return aboutCache.data;
+      try {
+        const res = await api("https://www.googleapis.com/drive/v3/about?fields=storageQuota,user(displayName,emailAddress)");
+        if (!res.ok) return null;
+        const d = await res.json();
+        const q = d.storageQuota || {};
+        const data = {
+          nome: (d.user || {}).displayName || "",
+          email: (d.user || {}).emailAddress || "",
+          limite: q.limit != null ? Number(q.limit) : null,   // null = sem limite definido
+          usado: Number(q.usage || 0),
+          usadoNoDrive: Number(q.usageInDrive || 0),
+          lixeira: Number(q.usageInDriveTrash || 0),
+        };
+        if (data.email) localStorage.setItem(LS_USER, data.email);
+        aboutCache = { at: Date.now(), data };
+        return data;
+      } catch (e) { return null; }
     },
     async getMediaBlob(fileId) {
       const res = await api(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);

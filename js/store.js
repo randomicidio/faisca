@@ -132,10 +132,15 @@
     return idea;
   }
 
-  // reordena as ideias na sequência dada (dentro de uma etapa)
+  // reordena as ideias na sequência dada; só marca como alterado quem realmente
+  // mudou de lugar, pra não jogar a lista inteira na sincronização a cada arraste
   function reorderIdeas(orderedIds) {
-    orderedIds.forEach((id, k) => { const i = getIdea(id); if (i) { i.order = k; i.updated = now(); } });
-    save();
+    let changed = false;
+    orderedIds.forEach((id, k) => {
+      const i = getIdea(id);
+      if (i && i.order !== k) { i.order = k; i.updated = now(); changed = true; }
+    });
+    if (changed) save();
   }
 
   // move uma ideia para outra etapa, no fim dela
@@ -163,9 +168,24 @@
     save();
   }
   function setTheme(theme) { state.settings.theme = theme; save(false); }
+  function setSort(mode) { state.settings.sort = mode; save(false); }
+  function setUploadMedia(on) { state.settings.uploadMedia = !!on; save(false); }
+
+  // assinatura do conteúdo — serve para saber se a mesclagem mudou algo de verdade
+  function signature() {
+    return JSON.stringify(state.ideas.map((i) => [i.id, i.updated, i.stage, i.order, i.title, i.script, i.platforms, (i.media || []).map((m) => [m.id, m.name, m.order])]))
+      + "|" + state.tombstones.map((t) => t.id).sort().join(",");
+  }
+
+  function addTombstone(id) {
+    const t = state.tombstones.find((x) => x.id === id);
+    if (t) t.deleted = now(); else state.tombstones.push({ id, deleted: now() });
+  }
 
   // ---- Mesclagem (sincronização Drive) ----
+  // Devolve true se a mesclagem realmente alterou alguma coisa.
   function mergeRemote(remote) {
+    const before = signature();
     remote = normalize(remote || {});
     const byId = new Map();
     for (const i of state.ideas) byId.set(i.id, i);
@@ -186,20 +206,25 @@
     state.tombstones = Array.from(tomb, ([id, deleted]) => ({ id, deleted }));
     state.updatedAt = Math.max(state.updatedAt || 0, remote.updatedAt || 0, now());
     state.settings = Object.assign({}, remote.settings || {}, state.settings || {});
-    save(false);
+    const changed = signature() !== before;
+    // se nada mudou, não avisamos ninguém: a tela não pisca à toa
+    if (changed) save(false);
+    else { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {} }
+    return changed;
   }
 
   function exportObject() { return { app: "faisca", version: 1, exportedAt: now(), data: state }; }
   function importObject(obj) {
     if (!obj) throw new Error("Arquivo vazio.");
-    mergeRemote(obj.data || obj);
+    return mergeRemote(obj.data || obj);
   }
 
   window.Store = {
+    KEY: LS_KEY,
     STAGES, STAGE_PROGRESS, PLATFORMS, SPARKS,
     load, save, subscribe, get: () => state,
-    addIdea, getIdea, updateIdea, deleteIdea, setTheme, reorderIdeas, moveIdeaToStageEnd,
-    mergeRemote, exportObject, importObject,
+    addIdea, getIdea, updateIdea, deleteIdea, setTheme, setSort, setUploadMedia, reorderIdeas, moveIdeaToStageEnd,
+    mergeRemote, exportObject, importObject, addTombstone, signature,
     uid, now,
     progressOf: (i) => (i.stage === "postado" ? 100 : STAGE_PROGRESS[i.stage] || 0),
     randomSpark: () => SPARKS[Math.floor(Math.random() * SPARKS.length)],
