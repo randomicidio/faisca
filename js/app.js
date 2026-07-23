@@ -86,7 +86,7 @@
 
       <div class="toolbar">
         <label class="toolbar-search">${I.search}<input id="search" type="search" placeholder="Buscar nas suas ideias..." autocomplete="off"></label>
-        <button class="sort-btn" id="sortBtn" title="Ordenar">${I.sort}<span id="sortLabel">Manual</span></button>
+        <button class="sort-btn" id="sortBtn" title="Ordenar">${I.sort}<span id="sortLabel">Ordenar</span></button>
       </div>
 
       <div id="boardHost"></div>
@@ -221,26 +221,23 @@
 
   // ---------- ordenação ----------
   const SORTS = [
-    { key: "manual",  label: "Manual",       hint: "a ordem que você arrastar" },
-    { key: "status",  label: "Status",       hint: "mais perto de pronto no topo" },
+    { key: "status",  label: "Status",        hint: "mais perto de pronto no topo" },
     { key: "criacao", label: "Mais recentes", hint: "pela data de criação" },
   ];
   function atualizarBotaoOrdem() {
-    const s = SORTS.find((x) => x.key === (S.get().settings.sort || "manual")) || SORTS[0];
-    const lb = $("#sortLabel"); if (lb) lb.textContent = s.label;
+    const lb = $("#sortLabel"); if (lb) lb.textContent = "Ordenar";
   }
   $("#sortBtn").addEventListener("click", (e) => {
     e.stopPropagation();
     const aberto = $(".menu"); if (aberto) { aberto.remove(); return; }
-    const atual = S.get().settings.sort || "manual";
     const m = document.createElement("div");
     m.className = "menu sort-menu";
     m.innerHTML = `<div class="muted">Ordenar por</div>` + SORTS.map((s) =>
-      `<button data-s="${s.key}" class="${s.key === atual ? "is-on" : ""}">
-         <span class="sort-tick">${s.key === atual ? I.check : ""}</span>
+      `<button data-s="${s.key}">
+         <span class="sort-tick"></span>
          <span><b>${s.label}</b><small>${s.hint}</small></span>
        </button>`).join("") +
-      `<hr><div class="sort-note">Arrastar um card sempre volta pro manual.</div>`;
+      `<hr><div class="sort-note">Aplica uma vez. Depois a ordem continua manual.</div>`;
     const r = $("#sortBtn").getBoundingClientRect();
     m.style.top = r.bottom + 8 + "px";
     m.style.right = Math.max(12, window.innerWidth - r.right) + "px";
@@ -250,11 +247,28 @@
     m.addEventListener("click", (ev) => {
       const b = ev.target.closest("button[data-s]"); if (!b) return;
       fechar();
-      S.setSort(b.dataset.s);
-      atualizarBotaoOrdem();
-      renderBoard();
+      applySortOnce(b.dataset.s);
     });
   });
+
+  function applySortOnce(mode) {
+    const ids = S.get().ideas.slice().sort((a, b) => {
+      const pa = a.stage === "postado" ? 1 : 0, pb = b.stage === "postado" ? 1 : 0;
+      if (pa !== pb) return pa - pb;
+      if (mode === "criacao") {
+        const d = (b.created || 0) - (a.created || 0);
+        if (d) return d;
+      } else if (mode === "status") {
+        const d = (S.STAGE_PROGRESS[b.stage] || 0) - (S.STAGE_PROGRESS[a.stage] || 0);
+        if (d) return d;
+      }
+      return (a.order || 0) - (b.order || 0);
+    }).map((i) => i.id);
+    S.setSort("manual");
+    S.reorderIdeas(ids);
+    renderBoard();
+    toast("Ordem aplicada");
+  }
 
   // ---------- search ----------
   $("#search").addEventListener("input", debounce((e) => { search = e.target.value.trim().toLowerCase(); renderBoard(); }, 120));
@@ -277,20 +291,10 @@
         </div>`;
       return;
     }
-    // Lista única. Em qualquer ordenação, o que já foi postado vai pro fim:
-    // não é mais trabalho pendente.
-    const modo = S.get().settings.sort || "manual";
+    // Lista única. A ordem exibida é a ordem manual salva.
     const ideas = visibleIdeas().slice().sort((a, b) => {
       const pa = a.stage === "postado" ? 1 : 0, pb = b.stage === "postado" ? 1 : 0;
       if (pa !== pb) return pa - pb;
-      if (modo === "criacao") {
-        const d = (b.created || 0) - (a.created || 0);
-        if (d) return d;
-      } else if (modo === "status") {
-        // mais perto de pronto fica mais em cima
-        const d = (S.STAGE_PROGRESS[b.stage] || 0) - (S.STAGE_PROGRESS[a.stage] || 0);
-        if (d) return d;
-      }
       return (a.order || 0) - (b.order || 0);
     });
 
@@ -1605,8 +1609,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v42") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v42", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v43") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v43", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1614,7 +1618,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "42";
+    document.documentElement.dataset.appVersion = "43";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
