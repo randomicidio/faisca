@@ -207,9 +207,13 @@
   async function instalarAgora() {
     if (jaEhApp()) { toast("Você já está usando o app instalado"); return; }
     if (convite) {
-      convite.prompt();
-      try { await convite.userChoice; } catch (e) {}
+      const prompt = convite;
       convite = null;
+      prompt.prompt();
+      try {
+        const choice = await prompt.userChoice;
+        if (!choice || choice.outcome === "accepted") return;
+      } catch (e) { return; }
     }
     comoInstalarModal();
   }
@@ -233,7 +237,7 @@
       <div class="modal-card">
         <h3>Instalar o Faísca</h3>
         <p style="color:var(--text-dim);font-size:14px;margin:0 0 12px">
-          Ele vira um app de verdade: ícone próprio, tela cheia, funciona sem internet e se atualiza sozinho.</p>
+          Caso ele não tenha instalado automaticamente, faça assim para criar o ícone do app.</p>
         <ol class="passos">${passos}</ol>
         <div class="row-btns"><button data-x="cancel">Fechar</button></div>
       </div>`;
@@ -1535,7 +1539,7 @@
   function aboutModal() {
     const cfg = window.FAISCA_CONFIG || {};
     const appVersion = cfg.APP_VERSION || "1.0.1";
-    const buildVersion = cfg.BUILD_VERSION || "v70";
+    const buildVersion = cfg.BUILD_VERSION || "v71";
     const runtime = window.FaiscaDesktopOAuth ? "Aplicativo de computador" : "Web / celular";
     const syncState = D.isConnected() ? "Google Drive conectado" : "Somente neste aparelho";
     const sessionMode = window.FaiscaDesktopOAuth
@@ -2008,7 +2012,7 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        const buildVersion = (window.FAISCA_CONFIG && window.FAISCA_CONFIG.BUILD_VERSION) || "v70";
+        const buildVersion = (window.FAISCA_CONFIG && window.FAISCA_CONFIG.BUILD_VERSION) || "v71";
         const reloadKey = `faisca:reloaded:${buildVersion}`;
         if (sessionStorage.getItem(reloadKey) === "1") return;
         sessionStorage.setItem(reloadKey, "1");
