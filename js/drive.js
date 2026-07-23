@@ -295,7 +295,7 @@
       }
       if (usesSessionBackend()) {
         beginSessionLogin(!!options.selectAccount);
-        return "";
+        await new Promise(() => {});
       }
       await initClient();
       await ensureToken(true, !!options.selectAccount);
