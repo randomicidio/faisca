@@ -35,7 +35,8 @@
       ],
       "category": "public.app-category.productivity",
       "icon": "icons/faisca.icns",
-      "hardenedRuntime": false
+      "hardenedRuntime": false,
+      "artifactName": "Mac-Faisca-${version}-${arch}.${ext}"
     }
   },
   "devDependencies": {
