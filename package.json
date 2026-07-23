@@ -37,7 +37,10 @@
       "icon": "icons/faisca.icns",
       "hardenedRuntime": false,
       "artifactName": "Mac-Faisca-${version}-${arch}.${ext}"
-    }
+    },
+    "asarUnpack": [
+      "electron/secrets.local.json"
+    ]
   },
   "devDependencies": {
     "@electron/packager": "^20.0.4",

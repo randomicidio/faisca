@@ -45,6 +45,17 @@ function migrarDados(antigo, destino) {
 tornarPortatil();
 
 function loadLocalSecrets() {
+  const candidates = [
+    path.join(process.resourcesPath || "", "app.asar.unpacked", "electron", "secrets.local.json"),
+    path.join(process.resourcesPath || "", "electron", "secrets.local.json"),
+    path.join(__dirname, "secrets.local.json"),
+  ];
+  for (const file of candidates) {
+    if (!file) continue;
+    try {
+      return JSON.parse(fs.readFileSync(file, "utf8"));
+    } catch (e) {}
+  }
   try {
     return JSON.parse(fs.readFileSync(path.join(__dirname, "secrets.local.json"), "utf8"));
   } catch (e) {

@@ -127,7 +127,7 @@ jobs:
       - name: Conferir segredo no app Mac
         run: |
           app="dist/mac-arm64/Faísca.app"
-          if [ ! -f "$app/Contents/Resources/app/electron/secrets.local.json" ]; then
+          if [ ! -f "$app/Contents/Resources/app.asar.unpacked/electron/secrets.local.json" ]; then
             echo "client_secret nao foi incluido no app Mac."
             find "$app/Contents/Resources" -maxdepth 4 -type f | sort
             exit 1
