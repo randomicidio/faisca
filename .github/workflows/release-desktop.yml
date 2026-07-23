@@ -54,7 +54,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload $env:RELEASE_TAG "dist-webview2/Faisca-Leve/Faisca.exe#(Windows, Portable)" --clobber
+        run: gh release upload $env:RELEASE_TAG "dist-webview2/Faisca-Leve/Faisca.exe#Faisca.exe (Windows, Portable)" --clobber
 
   mac:
     name: Build and upload Mac
@@ -118,4 +118,4 @@ jobs:
       - name: Publicar Mac na release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$RELEASE_TAG" "dist/Mac-Faisca-${APP_VERSION}-arm64.dmg#(Mac, Apple Silicon)" --clobber
+        run: gh release upload "$RELEASE_TAG" "dist/Mac-Faisca-${APP_VERSION}-arm64.dmg#Mac-Faisca-${APP_VERSION}-arm64.dmg (Mac, Apple Silicon)" --clobber
