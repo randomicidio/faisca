@@ -14,7 +14,13 @@
   const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
   const fmtDur = (s) => { s = Math.floor(s); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
   const fmtSize = (b) => (b > 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1024)) + " KB");
-  const isDesktopCapture = () => !!window.FaiscaDesktopOAuth || (window.matchMedia && matchMedia("(pointer: fine)").matches);
+  const isDesktopCapture = () => {
+    if (window.FaiscaDesktopOAuth) return true;
+    const coarse = window.matchMedia && matchMedia("(pointer: coarse)").matches;
+    const narrow = Math.min(window.innerWidth || 0, window.innerHeight || 0) < 760;
+    const mobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+    return !mobileUA && !coarse && !narrow;
+  };
 
   const I = {
     search: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
@@ -1909,8 +1915,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v54") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v54", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v55") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v55", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1918,7 +1924,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "54";
+    document.documentElement.dataset.appVersion = "55";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
