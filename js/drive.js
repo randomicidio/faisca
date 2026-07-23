@@ -263,8 +263,7 @@
           const restored = await window.FaiscaDesktopOAuth.restore({ clientId: CFG.GOOGLE_DESKTOP_CLIENT_ID.trim() });
           return acceptToken(restored);
         }
-        await initClient();
-        return refreshSilently();
+        return false;
       }
       catch (e) { return false; }
     },
