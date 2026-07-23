@@ -689,6 +689,7 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 }
 /* cards da mesma linha ficam da mesma altura; o rodapé cola embaixo */
 .board-flat .card { display: flex; flex-direction: column; }
+.board-flat .card { touch-action: none; }
 .board-flat .card__meta { margin-top: auto; padding-top: 11px; }
 .board-flat .stage-empty { grid-column: 1 / -1; }
 

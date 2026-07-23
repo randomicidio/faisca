@@ -334,7 +334,10 @@
         <span class="mini-stage">${esc(stage.label)}</span>
       </div>`;
 
-    el.addEventListener("click", () => openDrawer(idea.id));
+    el.addEventListener("click", (e) => {
+      if (el.__dragMoved) { e.preventDefault(); el.__dragMoved = false; return; }
+      openDrawer(idea.id);
+    });
     bindStageBar(el, idea);
 
     el.addEventListener("dragstart", (e) => {
@@ -400,6 +403,46 @@
 
   // Uma lista só: arrastar reordena e passa a ordenação para "manual".
   function setupDrop(grid) {
+    let touchDrag = null;
+    grid.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "touch" && e.pointerType !== "pen") return;
+      const card = e.target.closest(".card");
+      if (!card || e.target.closest(".mini-prog")) return;
+      touchDrag = { card, id: card.dataset.id, startX: e.clientX, startY: e.clientY, active: false };
+    });
+    grid.addEventListener("pointermove", (e) => {
+      if (!touchDrag) return;
+      const dx = e.clientX - touchDrag.startX;
+      const dy = e.clientY - touchDrag.startY;
+      if (!touchDrag.active) {
+        if (Math.hypot(dx, dy) < 8) return;
+        touchDrag.active = true;
+        touchDrag.card.__dragMoved = true;
+        touchDrag.card.classList.add("dragging");
+        dragId = touchDrag.id;
+        try { touchDrag.card.setPointerCapture(e.pointerId); } catch (x) {}
+      }
+      e.preventDefault();
+      const ref = gridDragAfter(grid, e.clientX, e.clientY);
+      if (ref == null) grid.appendChild(touchDrag.card);
+      else if (ref !== touchDrag.card) grid.insertBefore(touchDrag.card, ref);
+    }, { passive: false });
+    const finishTouchDrag = (e) => {
+      if (!touchDrag) return;
+      if (touchDrag.active) {
+        S.setSort("manual");
+        S.reorderIdeas($$(".card", grid).map((c) => c.dataset.id));
+        touchDrag.card.classList.remove("dragging");
+        const card = touchDrag.card;
+        setTimeout(() => { card.__dragMoved = false; }, 250);
+      }
+      try { touchDrag.card.releasePointerCapture(e.pointerId); } catch (x) {}
+      touchDrag = null;
+      dragId = null;
+    };
+    grid.addEventListener("pointerup", finishTouchDrag);
+    grid.addEventListener("pointercancel", finishTouchDrag);
+
     grid.addEventListener("dragover", (e) => {
       if (!dragId) return;
       e.preventDefault();
@@ -1609,8 +1652,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v43") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v43", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v44") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v44", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1618,7 +1661,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "43";
+    document.documentElement.dataset.appVersion = "44";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
