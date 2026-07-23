@@ -37,6 +37,7 @@
     stop: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>',
     sort: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M6 12h12M9 18h6"/></svg>',
     grip: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>',
+    play: '<svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
     edit: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
     google: '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.5 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2-1.9 3.2-4.7 3.2-7.9Z"/><path fill="#34A853" d="M12 23c2.9 0 5.4-1 7.2-2.6l-3.6-2.7c-1 .7-2.3 1-3.6 1-2.8 0-5.1-1.9-6-4.4H2.3v2.8A11 11 0 0 0 12 23Z"/><path fill="#FBBC05" d="M6 14.3a6.6 6.6 0 0 1 0-4.2V7.3H2.3a11 11 0 0 0 0 9.9L6 14.3Z"/><path fill="#EA4335" d="M12 5.5c1.6 0 3 .5 4.1 1.6l3.1-3.1A11 11 0 0 0 2.3 7.3L6 10.1c.9-2.6 3.2-4.6 6-4.6Z"/></svg>',
   };
@@ -786,10 +787,18 @@
           <button class="media-del" title="Remover">${I.trash}</button>
         </div>
         <div class="media-player">${playerHTML}</div>`;
-      row.querySelector(".media-name").addEventListener("input", debounce((e) => {
+      const nameInput = row.querySelector(".media-name");
+      const saveMediaName = (input) => {
         const it = S.getIdea(id); const m = it && it.media.find((x) => x.id === c.id);
-        if (m) { m.name = e.target.value; S.updateIdea(id, { media: it.media }); }
-      }, 300));
+        if (m) { m.name = input.value; S.updateIdea(id, { media: it.media }); }
+      };
+      nameInput.addEventListener("input", debounce((e) => saveMediaName(e.target), 300));
+      nameInput.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        saveMediaName(e.target);
+        e.target.blur();
+      });
       row.querySelector(".media-del").addEventListener("click", async () => {
         const it = S.getIdea(id); if (!it) return;
         const m = it.media.find((x) => x.id === c.id);
@@ -932,7 +941,7 @@
         namePrefix: "Video ",
         blob,
         host,
-        previewHTML: (url) => `<video class="video-capture__review-media" controls playsinline src="${url}"></video>`,
+        previewHTML: (url) => `<video class="video-capture__review-media" playsinline src="${url}"></video><button class="video-capture__play" id="vcPlay" title="Tocar">${I.play}</button>`,
       });
       };
     };
@@ -1033,6 +1042,7 @@
       ${shot.previewHTML(url)}
       <div class="video-capture__review-top">
         <button class="video-capture__retake" id="vcRetake" title="Voltar">${I.x}</button>
+        ${shot.kind === "video" ? `<input class="video-capture__seek" id="vcSeek" type="range" min="0" max="1000" value="0" aria-label="Progresso do video">` : ""}
       </div>
       <div class="video-capture__caption">
         <input id="vcCaption" placeholder="Adicione um titulo..." autocomplete="off">
@@ -1041,6 +1051,26 @@
     host.appendChild(review);
     $("#vcRetake", host).addEventListener("click", () => retakeVideoCamera(ideaId));
     $("#vcConfirm", host).addEventListener("click", () => confirmCapture(ideaId));
+    const media = $(".video-capture__review-media", host);
+    const play = $("#vcPlay", host);
+    if (media && media.tagName === "VIDEO" && play) {
+      const seek = $("#vcSeek", host);
+      const syncPlay = () => play.classList.toggle("is-hidden", !media.paused);
+      const syncSeek = () => {
+        if (!seek || !media.duration) return;
+        seek.value = String(Math.round((media.currentTime / media.duration) * 1000));
+      };
+      play.addEventListener("click", () => media.paused ? media.play() : media.pause());
+      media.addEventListener("click", () => media.paused ? media.play() : media.pause());
+      media.addEventListener("play", syncPlay);
+      media.addEventListener("pause", syncPlay);
+      media.addEventListener("ended", syncPlay);
+      media.addEventListener("timeupdate", syncSeek);
+      media.addEventListener("loadedmetadata", syncSeek);
+      if (seek) seek.addEventListener("input", () => {
+        if (media.duration) media.currentTime = (Number(seek.value) / 1000) * media.duration;
+      });
+    }
   }
 
   async function confirmCapture(ideaId) {
@@ -1793,8 +1823,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v50") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v50", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v51") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v51", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1802,7 +1832,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "50";
+    document.documentElement.dataset.appVersion = "51";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
