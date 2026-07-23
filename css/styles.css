@@ -594,6 +594,15 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 .modal-card .row-btns button { flex: 1; border-radius: 11px; padding: 12px; font-weight: 650; font-size: 14px; border: 1px solid var(--border); background: var(--surface); }
 .modal-card .row-btns .primary { background: linear-gradient(135deg, var(--accent-2), var(--accent)); color: var(--accent-ink); border: none; }
 .modal-card .row-btns .danger { background: #c0392b; color: #fff; border: none; }
+.about-card { max-width: 460px; }
+.about-version { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 14px 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.about-version b { font-size: 16px; }
+.about-version span { color: var(--text-dim); font-size: 13px; font-weight: 700; }
+.about-list { display: grid; gap: 8px; margin: 0; }
+.about-list div { display: grid; grid-template-columns: 112px 1fr; gap: 12px; align-items: baseline; }
+.about-list dt { color: var(--text-dim); font-size: 12px; font-weight: 750; text-transform: uppercase; }
+.about-list dd { margin: 0; color: var(--text); font-size: 14px; line-height: 1.35; }
+.about-note { margin: 14px 0 0; color: var(--text-dim); font-size: 13px; line-height: 1.45; }
 
 /* ---------------- Responsive ---------------- */
 @media (max-width: 720px) {

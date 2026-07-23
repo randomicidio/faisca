@@ -1478,7 +1478,39 @@
   const connectModal = syncModal;
 
   function aboutModal() {
-    confirmModal("Faísca 🔥", "Seu estúdio de ideias. Anote fácil, grave áudio e vídeo, organize cada ideia e acompanhe do rascunho até a postagem. Seus dados são seus — ficam neste aparelho e, se você conectar, o texto sincroniza no seu próprio Google Drive.", "Fechar", null);
+    const cfg = window.FAISCA_CONFIG || {};
+    const appVersion = cfg.APP_VERSION || "1.0.1";
+    const buildVersion = cfg.BUILD_VERSION || "v63";
+    const runtime = window.FaiscaDesktopOAuth ? "Aplicativo de computador" : "Web / celular";
+    const syncState = D.isConnected() ? "Google Drive conectado" : "Somente neste aparelho";
+    const sessionMode = window.FaiscaDesktopOAuth
+      ? "Sessão local do app"
+      : (cfg.DRIVE_SESSION_API ? "Sessão web duradoura" : "Login web temporário");
+    const host = document.createElement("div");
+    host.className = "modal-center";
+    host.innerHTML = `
+      <div class="scrim open" style="position:absolute"></div>
+      <div class="modal-card about-card">
+        <h3>Sobre o Faísca</h3>
+        <div class="about-version">
+          <b>Versão ${esc(appVersion)}</b>
+          <span>${esc(buildVersion)}</span>
+        </div>
+        <dl class="about-list">
+          <div><dt>Rodando como</dt><dd>${esc(runtime)}</dd></div>
+          <div><dt>Sincronização</dt><dd>${esc(syncState)}</dd></div>
+          <div><dt>Login</dt><dd>${esc(sessionMode)}</dd></div>
+          <div><dt>Dados</dt><dd>No aparelho e, se conectado, no seu próprio Google Drive.</dd></div>
+        </dl>
+        <p class="about-note">O Faísca não mantém um servidor com suas ideias. A nuvem só entra para renovar o login e permitir que o app acesse o arquivo da pasta Faísca no seu Drive.</p>
+        <div class="row-btns">
+          <button class="primary" data-x="ok">Fechar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(host);
+    const close = () => host.remove();
+    host.querySelector(".scrim").addEventListener("click", close);
+    host.querySelector('[data-x="ok"]').addEventListener("click", close);
   }
 
   // ============================================================
@@ -1919,8 +1951,10 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v62") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v62", "1");
+        const buildVersion = (window.FAISCA_CONFIG && window.FAISCA_CONFIG.BUILD_VERSION) || "v63";
+        const reloadKey = `faisca:reloaded:${buildVersion}`;
+        if (sessionStorage.getItem(reloadKey) === "1") return;
+        sessionStorage.setItem(reloadKey, "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
