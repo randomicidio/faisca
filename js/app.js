@@ -556,7 +556,7 @@
     const created = new Date(idea.created);
     return `
       <div class="drawer__head">
-        <textarea class="drawer__title-input" id="dwTitle" rows="1" placeholder="Titulo da ideia...">${esc(idea.title)}</textarea>
+        <input class="drawer__title-input" id="dwTitle" type="text" enterkeyhint="done" value="${esc(idea.title)}" placeholder="Titulo da ideia...">
       </div>
       <div class="drawer__body">
         <div class="drawer__title-meta">
@@ -608,9 +608,13 @@
     const g = (s) => $(s, drawer);
 
     const title = g("#dwTitle");
-    const grow = (t) => { t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; };
-    grow(title);
-    title.addEventListener("input", () => { grow(title); S.updateIdea(id, { title: title.value }); });
+    title.addEventListener("input", () => S.updateIdea(id, { title: title.value }));
+    title.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      S.updateIdea(id, { title: title.value });
+      title.blur();
+    });
 
     g("#dwStages").addEventListener("click", (e) => {
       const b = e.target.closest(".stage-pick"); if (!b) return;
@@ -1823,8 +1827,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v51") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v51", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v52") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v52", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1832,7 +1836,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "51";
+    document.documentElement.dataset.appVersion = "52";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia

@@ -426,8 +426,8 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 .drawer__body { overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; flex: 1; }
 .drawer__title-input {
   border: none; background: none; font-size: 19px; font-weight: 760; letter-spacing: 0; width: 100%;
-  padding: 4px 0 2px; resize: none; overflow-y: auto; line-height: 1.22;
-  max-height: 92px; overscroll-behavior: contain;
+  padding: 4px 0 2px; line-height: 1.22; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .drawer__title-input:focus { box-shadow: none; }
 
