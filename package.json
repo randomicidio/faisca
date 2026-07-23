@@ -18,7 +18,9 @@
     "productName": "Faísca",
     "files": [
       "electron/**/*",
-      "icons/faisca.ico"
+      "icons/faisca.ico",
+      "icons/faisca.icns",
+      "icons/icon-512.png"
     ],
     "directories": {
       "output": "dist"
@@ -33,7 +35,7 @@
         "zip"
       ],
       "category": "public.app-category.productivity",
-      "icon": "icons/icon-512.png",
+      "icon": "icons/faisca.icns",
       "hardenedRuntime": false
     }
   },
