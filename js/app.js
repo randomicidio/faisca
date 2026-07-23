@@ -16,10 +16,12 @@
   const fmtSize = (b) => (b > 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1024)) + " KB");
   const isDesktopCapture = () => {
     if (window.FaiscaDesktopOAuth) return true;
-    const coarse = window.matchMedia && matchMedia("(pointer: coarse)").matches;
-    const narrow = Math.min(window.innerWidth || 0, window.innerHeight || 0) < 760;
+    const finePointer = window.matchMedia && matchMedia("(pointer: fine)").matches;
+    const hover = window.matchMedia && matchMedia("(hover: hover)").matches;
+    const wide = Math.max(window.innerWidth || 0, window.innerHeight || 0) >= 900;
+    const hasTouch = (navigator.maxTouchPoints || 0) > 0;
     const mobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
-    return !mobileUA && !coarse && !narrow;
+    return wide && finePointer && hover && !hasTouch && !mobileUA;
   };
 
   const I = {
@@ -1915,8 +1917,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v55") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v55", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v56") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v56", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1924,7 +1926,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "55";
+    document.documentElement.dataset.appVersion = "56";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
