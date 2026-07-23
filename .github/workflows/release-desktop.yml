@@ -50,6 +50,15 @@ jobs:
         shell: pwsh
         run: dotnet publish desktop-win/Faisca.csproj -c Release "-p:Version=$env:APP_VERSION" -o dist-webview2/Faisca-Leve
 
+      - name: Conferir segredo no app Windows
+        shell: pwsh
+        run: |
+          $dll = "desktop-win/bin/Release/net10.0-windows/win-x64/Faisca.dll"
+          if (!(Test-Path $dll)) { throw "Faisca.dll nao encontrado para conferencia." }
+          $asm = [System.Reflection.Assembly]::LoadFile((Resolve-Path $dll))
+          $resource = $asm.GetManifestResourceNames() | Where-Object { $_ -eq "faisca.segredos" }
+          if (!$resource) { throw "client_secret nao foi embutido no app Windows." }
+
       - name: Publicar .exe na release
         shell: pwsh
         env:
