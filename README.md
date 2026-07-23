@@ -130,6 +130,25 @@ Vira ícone próprio, abre em tela cheia, funciona offline.
 
 ---
 
+## Gerar o app leve para Windows
+
+Para testar ou distribuir o app como `.exe` no PC, use a versão WebView2:
+
+```bash
+npm run build:win
+```
+
+O executável correto fica em:
+
+```text
+dist-webview2/Faisca-Leve/Faisca.exe
+```
+
+Evite usar as pastas `dist/` e `dist-packager/`: elas são saídas antigas em Electron,
+bem maiores. O caminho recomendado é sempre `desktop-win/` → `dist-webview2/`.
+
+---
+
 ## 5) Backup e sincronização — como pensar
 
 - **Sem Drive:** os dados ficam só naquele aparelho/navegador. Use **☰ → Fazer backup**

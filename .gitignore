@@ -1,6 +1,8 @@
 node_modules/
 dist/
 dist-packager/
+dist-electron-antigo/
+dist-packager-electron-antigo/
 electron/secrets.local.json
 npm-debug.log*
 desktop-win/bin/

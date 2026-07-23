@@ -5,9 +5,12 @@
   "private": true,
   "main": "electron/main.js",
   "scripts": {
-    "desktop": "electron .",
-    "build:win": "electron-builder --win portable",
-    "build:win-folder": "electron-packager . \"Faísca\" --platform=win32 --arch=x64 --out=dist-packager --overwrite --icon=icons/faisca.ico --prune=true --ignore=\"^/dist($|/)\" --ignore=\"^/dist-packager($|/)\" --ignore=\"^/.git($|/)\""
+    "build:win": "dotnet publish desktop-win/Faisca.csproj -c Release -o dist-webview2/Faisca-Leve",
+    "build:pc": "npm run build:win",
+    "build:webview2": "npm run build:win",
+    "desktop:electron": "electron .",
+    "build:electron-portable": "electron-builder --win portable",
+    "build:electron-folder": "electron-packager . \"Faísca\" --platform=win32 --arch=x64 --out=dist-packager --overwrite --icon=icons/faisca.ico --prune=true --ignore=\"^/dist($|/)\" --ignore=\"^/dist-packager($|/)\" --ignore=\"^/.git($|/)\""
   },
   "build": {
     "appId": "com.dincontent.faisca",
