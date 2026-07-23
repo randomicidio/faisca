@@ -43,6 +43,14 @@
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
   background: #000;
 }
+.video-capture.facing-user .video-capture__preview,
+.video-capture.facing-user video.video-capture__review-media { transform: scaleX(-1); }
+.video-capture__loading {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  color: rgba(255,255,255,.76); font-size: 14px; font-weight: 750;
+  background: #050505;
+}
+.video-capture:not(.is-loading) .video-capture__loading { display: none; }
 .video-capture__shade {
   position: absolute; left: 0; right: 0; pointer-events: none;
 }

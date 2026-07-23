@@ -50,7 +50,8 @@
   let drawerURLs = [];
   let rec = null;       // gravação em andamento
   let recTimer = null;
-  let vcFacing = "environment";
+  let vcFacing = "user";
+  let cameraHistoryActive = false;
 
   // ---------- scaffold ----------
   const root = document.getElementById("app");
@@ -537,6 +538,7 @@
     renderBoard();
   }
   window.addEventListener("popstate", (e) => {
+    if (rec && rec.kind === "video") { closeVideoCamera(true); return; }
     if (openId) { closeDrawer(true); return; }
     const id = e.state && e.state.faiscaDrawer;
     if (id) openDrawer(id, true);
@@ -575,7 +577,7 @@
           <label>Mídias <span class="label-hint">(ficam salvas neste aparelho)</span></label>
           <div class="media-actions">
             <button class="media-btn" id="dwRecAudio">${I.mic} Gravar áudio</button>
-            <button class="media-btn" id="dwRecVideo">${I.cam} Gravar vídeo</button>
+            <button class="media-btn" id="dwRecVideo">${I.cam} Gravar vídeo/foto</button>
             <button class="media-btn" id="dwUpload">${I.image} Enviar foto/arquivo</button>
           </div>
           <div id="dwRec" class="rec-panel" hidden></div>
@@ -859,21 +861,14 @@
     inp.click();
   }
 
-  async function openVideoCamera(ideaId) {
+  async function openVideoCamera(ideaId, keepHistory) {
     if (rec) return;
     if (!navigator.mediaDevices || !window.MediaRecorder) { toast("Seu navegador nao permite gravar aqui", true); return; }
-    const constraints = () => ({
-      video: { facingMode: { ideal: vcFacing }, width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: true,
-    });
-    const getStream = async () => navigator.mediaDevices.getUserMedia(constraints());
-    let stream;
-    try { stream = await getStream(); }
-    catch (e) { toast("Preciso de acesso a camera e ao microfone", true); return; }
     const host = document.createElement("div");
-    host.className = "video-capture";
+    host.className = "video-capture is-loading facing-" + vcFacing;
     host.innerHTML = `
       <video class="video-capture__preview" autoplay muted playsinline></video>
+      <div class="video-capture__loading">Iniciando camera...</div>
       <div class="video-capture__shade top"></div>
       <div class="video-capture__shade bottom"></div>
       <button class="video-capture__close" id="vcClose" title="Fechar">${I.x}</button>
@@ -888,11 +883,29 @@
         <button class="is-active" data-mode="video">VIDEO</button>
       </div>`;
     document.body.appendChild(host);
+    if (!keepHistory && history.pushState) {
+      history.pushState({ faiscaCamera: ideaId }, "", location.href);
+      cameraHistoryActive = true;
+    }
     const preview = $(".video-capture__preview", host);
+    rec = { mr: null, stream: null, kind: "video", captureMode: "video", startTs: null, canceled: false, host };
+    $("#vcClose", host).addEventListener("click", () => closeVideoCamera());
+    $("#vcGallery", host).addEventListener("click", () => pickMediaFromGallery(ideaId));
+    const constraints = () => ({
+      video: { facingMode: { ideal: vcFacing }, width: { ideal: 960 }, height: { ideal: 540 } },
+      audio: true,
+    });
+    const getStream = async () => navigator.mediaDevices.getUserMedia(constraints());
+    let stream;
+    try { stream = await getStream(); }
+    catch (e) { toast("Preciso de acesso a camera e ao microfone", true); closeVideoCamera(); return; }
+    if (!rec || rec.host !== host || rec.canceled) { stream.getTracks().forEach((t) => t.stop()); return; }
     preview.srcObject = stream;
+    rec.stream = stream;
+    host.classList.remove("is-loading");
     let mr;
     try { mr = new MediaRecorder(stream); }
-    catch (e) { stream.getTracks().forEach((t) => t.stop()); host.remove(); toast("Nao consegui iniciar a gravacao", true); return; }
+    catch (e) { stream.getTracks().forEach((t) => t.stop()); toast("Nao consegui iniciar a gravacao", true); closeVideoCamera(); return; }
     const chunks = [];
     const attachRecorder = (recorder) => {
       recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
@@ -915,17 +928,17 @@
       };
     };
     attachRecorder(mr);
-    rec = { mr, stream, kind: "video", captureMode: "video", startTs: null, canceled: false, host };
-    $("#vcClose", host).addEventListener("click", closeVideoCamera);
-    $("#vcGallery", host).addEventListener("click", () => pickMediaFromGallery(ideaId));
+    rec.mr = mr;
     $("#vcFlip", host).addEventListener("click", async () => {
-      if (!rec || rec.startTs) return;
+      if (!rec || rec.startTs || !rec.stream) return;
       vcFacing = vcFacing === "environment" ? "user" : "environment";
       try {
         rec.stream.getTracks().forEach((t) => t.stop());
         rec.stream = await getStream();
         preview.srcObject = rec.stream;
         rec.mr = new MediaRecorder(rec.stream);
+        host.classList.toggle("facing-user", vcFacing === "user");
+        host.classList.toggle("facing-environment", vcFacing === "environment");
         attachRecorder(rec.mr);
       } catch (e) { toast("Nao consegui trocar a camera", true); }
     });
@@ -936,7 +949,7 @@
       $$("[data-mode]", host).forEach((x) => x.classList.toggle("is-active", x === b));
     });
     $("#vcRecord", host).addEventListener("click", () => {
-      if (!rec) return;
+      if (!rec || !rec.mr || !rec.stream) return;
       if (rec.captureMode === "photo") { capturePhoto(ideaId, preview, host); return; }
       if (rec.startTs) { stopRec(false); return; }
       rec.startTs = Date.now();
@@ -953,6 +966,10 @@
     canvas.width = preview.videoWidth;
     canvas.height = preview.videoHeight;
     const ctx = canvas.getContext("2d");
+    if (vcFacing === "user") {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(preview, 0, 0, canvas.width, canvas.height);
     canvas.toBlob(async (blob) => {
       if (!blob) { toast("Nao consegui salvar a foto", true); return; }
@@ -1011,14 +1028,19 @@
     try { if (rec.stream) rec.stream.getTracks().forEach((t) => t.stop()); } catch (e) {}
     rec = null;
     host.remove();
-    openVideoCamera(ideaId);
+    openVideoCamera(ideaId, true);
   }
 
-  function closeVideoCamera() {
+  function closeVideoCamera(fromHistory) {
     if (!rec || rec.kind !== "video") return;
+    if (cameraHistoryActive && !fromHistory && history.back) {
+      history.back();
+      return;
+    }
     rec.canceled = true;
+    cameraHistoryActive = false;
     if (rec.pendingURL) URL.revokeObjectURL(rec.pendingURL);
-    try { rec.stream.getTracks().forEach((t) => t.stop()); } catch (e) {}
+    try { if (rec.stream) rec.stream.getTracks().forEach((t) => t.stop()); } catch (e) {}
     const inactive = !rec.mr || rec.mr.state === "inactive";
     try { if (!inactive) rec.mr.stop(); } catch (e) {}
     if (rec.host) rec.host.remove();
@@ -1732,8 +1754,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v48") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v48", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v49") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v49", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1741,7 +1763,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "48";
+    document.documentElement.dataset.appVersion = "49";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
