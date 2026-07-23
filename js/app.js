@@ -843,16 +843,17 @@
   }
 
   // ---- gravação (MediaRecorder) ----
-  function pickVideoFromGallery(ideaId) {
+  function pickMediaFromGallery(ideaId) {
     const inp = document.createElement("input");
     inp.type = "file";
-    inp.accept = "video/*";
+    inp.accept = "image/*,video/*";
     inp.addEventListener("change", async () => {
       const f = inp.files && inp.files[0];
       if (!f) return;
-      await addMediaToIdea(ideaId, { kind: "video", mime: f.type || "video/*", name: f.name, blob: f });
+      const kind = (f.type || "").startsWith("image") ? "image" : "video";
+      await addMediaToIdea(ideaId, { kind, mime: f.type || (kind === "image" ? "image/*" : "video/*"), name: f.name, blob: f });
       if (openId === ideaId) renderMediaList(ideaId);
-      toast("Video adicionado");
+      toast(kind === "image" ? "Foto adicionada" : "Video adicionado");
       closeVideoCamera();
     });
     inp.click();
@@ -881,6 +882,10 @@
         <button class="video-capture__gallery" id="vcGallery" title="Galeria">${I.image}</button>
         <button class="video-capture__record" id="vcRecord" title="Gravar"></button>
         <button class="video-capture__flip" id="vcFlip" title="Trocar camera">${I.refresh}</button>
+      </div>
+      <div class="video-capture__modes" id="vcModes">
+        <button data-mode="photo">FOTO</button>
+        <button class="is-active" data-mode="video">VIDEO</button>
       </div>`;
     document.body.appendChild(host);
     const preview = $(".video-capture__preview", host);
@@ -920,9 +925,9 @@
       };
     };
     attachRecorder(mr);
-    rec = { mr, stream, kind: "video", startTs: null, canceled: false, host };
+    rec = { mr, stream, kind: "video", captureMode: "video", startTs: null, canceled: false, host };
     $("#vcClose", host).addEventListener("click", closeVideoCamera);
-    $("#vcGallery", host).addEventListener("click", () => pickVideoFromGallery(ideaId));
+    $("#vcGallery", host).addEventListener("click", () => pickMediaFromGallery(ideaId));
     $("#vcFlip", host).addEventListener("click", async () => {
       if (!rec || rec.startTs) return;
       vcFacing = vcFacing === "environment" ? "user" : "environment";
@@ -934,8 +939,15 @@
         attachRecorder(rec.mr);
       } catch (e) { toast("Nao consegui trocar a camera", true); }
     });
+    $("#vcModes", host).addEventListener("click", (e) => {
+      const b = e.target.closest("[data-mode]"); if (!b || !rec || rec.startTs) return;
+      rec.captureMode = b.dataset.mode;
+      host.classList.toggle("is-photo", rec.captureMode === "photo");
+      $$("[data-mode]", host).forEach((x) => x.classList.toggle("is-active", x === b));
+    });
     $("#vcRecord", host).addEventListener("click", () => {
       if (!rec) return;
+      if (rec.captureMode === "photo") { capturePhoto(ideaId, preview, host); return; }
       if (rec.startTs) { stopRec(false); return; }
       rec.startTs = Date.now();
       host.classList.add("is-recording");
@@ -943,6 +955,26 @@
       rec.mr.start();
       recTimer = setInterval(renderRecTime, 250);
     });
+  }
+
+  function capturePhoto(ideaId, preview, host) {
+    if (!preview || !preview.videoWidth || !preview.videoHeight) { toast("Camera ainda iniciando", true); return; }
+    const canvas = document.createElement("canvas");
+    canvas.width = preview.videoWidth;
+    canvas.height = preview.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(preview, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(async (blob) => {
+      if (!blob) { toast("Nao consegui salvar a foto", true); return; }
+      const stamp = new Date().toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+      try {
+        await addMediaToIdea(ideaId, { kind: "image", mime: blob.type || "image/jpeg", name: "Foto " + stamp, blob });
+        if (openId === ideaId) renderMediaList(ideaId);
+        host.classList.add("did-shot");
+        setTimeout(() => host.classList.remove("did-shot"), 180);
+        toast("Foto salva");
+      } catch (e) { toast("Nao consegui salvar a foto", true); }
+    }, "image/jpeg", 0.92);
   }
 
   function closeVideoCamera() {
@@ -1662,8 +1694,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v46") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v46", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v47") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v47", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1671,7 +1703,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "46";
+    document.documentElement.dataset.appVersion = "47";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
