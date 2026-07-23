@@ -11,7 +11,7 @@
     "desktop:electron": "electron .",
     "build:electron-portable": "electron-builder --win portable",
     "build:electron-folder": "electron-packager . \"Faísca\" --platform=win32 --arch=x64 --out=dist-packager --overwrite --icon=icons/faisca.ico --prune=true --ignore=\"^/dist($|/)\" --ignore=\"^/dist-packager($|/)\" --ignore=\"^/.git($|/)\"",
-    "build:mac": "electron-builder --mac dmg zip"
+    "build:mac": "electron-builder --mac dmg"
   },
   "build": {
     "appId": "com.dincontent.faisca",
@@ -31,8 +31,7 @@
     },
     "mac": {
       "target": [
-        "dmg",
-        "zip"
+        "dmg"
       ],
       "category": "public.app-category.productivity",
       "icon": "icons/faisca.icns",

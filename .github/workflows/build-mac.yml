@@ -15,7 +15,7 @@ jobs:
       - name: Preparar Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Instalar dependencias
@@ -47,5 +47,4 @@ jobs:
           name: faisca-mac
           path: |
             dist/*.dmg
-            dist/*.zip
           if-no-files-found: error
