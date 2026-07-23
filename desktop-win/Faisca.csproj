@@ -31,4 +31,19 @@
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
   </ItemGroup>
 
+  <!-- Icone e segredo viajam DENTRO do .exe: a pasta fica so com ele.
+       O secrets.local.json continua fora do git (esta no .gitignore);
+       ele e lido na hora de compilar e some do disco no resultado. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\icons\faisca.ico" LogicalName="faisca.icone" />
+    <EmbeddedResource Include="..\electron\secrets.local.json"
+                      LogicalName="faisca.segredos"
+                      Condition="Exists('..\electron\secrets.local.json')" />
+  </ItemGroup>
+
+  <Target Name="AvisarSegredoAusente" BeforeTargets="BeforeBuild"
+          Condition="!Exists('..\electron\secrets.local.json')">
+    <Warning Text="electron/secrets.local.json nao encontrado: o login do Google vai faltar o client_secret." />
+  </Target>
+
 </Project>

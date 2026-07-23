@@ -64,7 +64,12 @@ public class JanelaPrincipal : Form
         MinimumSize = new Size(390, 640);
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = ColorTranslator.FromHtml("#f3f1ec");
-        try { Icon = new Icon(Path.Combine(AppContext.BaseDirectory, "faisca.ico")); } catch { }
+        try
+        {
+            using var ico = typeof(Program).Assembly.GetManifestResourceStream("faisca.icone");
+            if (ico is not null) Icon = new Icon(ico);
+        }
+        catch { }
 
         _sessao = new Sessao(Path.Combine(_pastaDados, "google-drive-session.json"));
         _web.Dock = DockStyle.Fill;
@@ -416,7 +421,10 @@ public class Sessao
     }
 }
 
-// ---- client secret, lido de um arquivo ao lado do .exe ----
+// ---- client secret ----
+// Vem embutido no .exe, pra pasta do programa ficar só com o executável.
+// Um arquivo solto (ao lado do .exe ou na pasta de dados) ainda tem
+// prioridade, caso seja preciso trocar sem recompilar.
 public static class Segredos
 {
     private static string _cache;
@@ -426,13 +434,32 @@ public static class Segredos
     {
         if (_lido) return _cache;
         _lido = true;
+        _cache = DeArquivo(Path.Combine(AppContext.BaseDirectory, "secrets.local.json"))
+              ?? DeArquivo(Path.Combine(Program.PastaDados(), "secrets.local.json"))
+              ?? DoEmbutido();
+        return _cache;
+    }
+
+    private static string DeArquivo(string caminho)
+    {
+        try { return Ler(File.ReadAllText(caminho)); } catch { return null; }
+    }
+
+    private static string DoEmbutido()
+    {
         try
         {
-            var caminho = Path.Combine(AppContext.BaseDirectory, "secrets.local.json");
-            var json = JsonNode.Parse(File.ReadAllText(caminho));
-            _cache = json?["googleDesktopClientSecret"]?.GetValue<string>();
+            using var s = typeof(Segredos).Assembly.GetManifestResourceStream("faisca.segredos");
+            if (s is null) return null;
+            using var r = new StreamReader(s);
+            return Ler(r.ReadToEnd());
         }
-        catch { _cache = null; }
-        return _cache;
+        catch { return null; }
+    }
+
+    private static string Ler(string texto)
+    {
+        var v = JsonNode.Parse(texto)?["googleDesktopClientSecret"]?.GetValue<string>();
+        return string.IsNullOrEmpty(v) ? null : v;
     }
 }
