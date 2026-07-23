@@ -816,8 +816,8 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 .card:hover { box-shadow: var(--card-shadow-hover); border-color: var(--border-strong); }
 .card.is-fresh { animation: freshCard 2.4s ease-out both; }
 @keyframes freshCard {
-  0% { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-line), var(--card-shadow-hover); }
-  45% { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-line), var(--card-shadow-hover); }
+  0% { transform: translateY(-3px); background: color-mix(in srgb, var(--accent) 12%, var(--card-bg)); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-line), var(--card-shadow-hover); }
+  45% { background: color-mix(in srgb, var(--accent) 8%, var(--card-bg)); border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-line), var(--card-shadow-hover); }
   100% { transform: none; }
 }
 .stage-empty { color: var(--text-faint); }

@@ -141,6 +141,7 @@
     if (!title) { inp.focus(); return; }
     const idea = S.addIdea({ title });
     freshIdeaId = idea.id;
+    renderBoard();
     setTimeout(() => {
       if (freshIdeaId === idea.id) { freshIdeaId = null; renderBoard(); }
     }, 2600);
@@ -1534,7 +1535,7 @@
   function aboutModal() {
     const cfg = window.FAISCA_CONFIG || {};
     const appVersion = cfg.APP_VERSION || "1.0.1";
-    const buildVersion = cfg.BUILD_VERSION || "v69";
+    const buildVersion = cfg.BUILD_VERSION || "v70";
     const runtime = window.FaiscaDesktopOAuth ? "Aplicativo de computador" : "Web / celular";
     const syncState = D.isConnected() ? "Google Drive conectado" : "Somente neste aparelho";
     const sessionMode = window.FaiscaDesktopOAuth
@@ -2007,7 +2008,7 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        const buildVersion = (window.FAISCA_CONFIG && window.FAISCA_CONFIG.BUILD_VERSION) || "v69";
+        const buildVersion = (window.FAISCA_CONFIG && window.FAISCA_CONFIG.BUILD_VERSION) || "v70";
         const reloadKey = `faisca:reloaded:${buildVersion}`;
         if (sessionStorage.getItem(reloadKey) === "1") return;
         sessionStorage.setItem(reloadKey, "1");
