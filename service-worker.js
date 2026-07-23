@@ -1,14 +1,14 @@
 // Faísca — service worker (funciona offline)
-const CACHE = "faisca-v36";
+const CACHE = "faisca-v40";
 const ASSETS = [
   "./",
   "./index.html",
-  "./css/styles.css",
-  "./js/config.js",
-  "./js/store.js",
-  "./js/media.js",
-  "./js/drive.js",
-  "./js/app.js",
+  "./css/styles.css?v=40",
+  "./js/config.js?v=40",
+  "./js/store.js?v=40",
+  "./js/media.js?v=40",
+  "./js/drive.js?v=40",
+  "./js/app.js?v=40",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -16,7 +16,13 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith("faisca-")).map((k) => caches.delete(k))))
+      .then(() => caches.open(CACHE))
+      .then((c) => c.addAll(ASSETS))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (e) => {
@@ -24,6 +30,16 @@ self.addEventListener("activate", (e) => {
     caches.keys().then((keys) =>
       Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
     ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener("message", (e) => {
+  if (!e.data || e.data.type !== "CLEAR_FAISCA_CACHE") return;
+  e.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith("faisca-") && k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.matchAll({ type: "window", includeUncontrolled: true }))
+      .then((clients) => clients.forEach((client) => client.postMessage({ type: "FAISCA_CACHE_CLEARED" })))
   );
 });
 

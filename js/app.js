@@ -433,6 +433,7 @@
   //  DRAWER
   // ============================================================
   let scrim, drawer;
+  let drawerHistoryActive = false;
   function ensureDrawer() {
     if (drawer) return;
     scrim = document.createElement("div"); scrim.className = "scrim";
@@ -442,24 +443,38 @@
     document.addEventListener("keydown", (e) => { if (e.key === "Escape" && openId) closeDrawer(); });
   }
 
-  function openDrawer(id) {
+  function openDrawer(id, fromHistory) {
     const idea = S.getIdea(id); if (!idea) return;
     ensureDrawer();
     openId = id; boardFrozen = true;
+    if (!fromHistory && history.pushState) {
+      history.pushState({ faiscaDrawer: id }, "", location.href);
+      drawerHistoryActive = true;
+    }
     drawer.innerHTML = drawerHTML(idea);
     bindDrawer(idea);
     void drawer.getBoundingClientRect();
     scrim.classList.add("open"); drawer.classList.add("open");
   }
 
-  function closeDrawer() {
+  function closeDrawer(fromHistory) {
     if (!drawer) return;
+    if (openId && drawerHistoryActive && !fromHistory && history.back) {
+      history.back();
+      return;
+    }
     stopRec(true);
     revokeURLs();
     scrim.classList.remove("open"); drawer.classList.remove("open");
     openId = null; boardFrozen = false;
+    drawerHistoryActive = false;
     renderBoard();
   }
+  window.addEventListener("popstate", (e) => {
+    if (openId) { closeDrawer(true); return; }
+    const id = e.state && e.state.faiscaDrawer;
+    if (id) openDrawer(id, true);
+  });
   function revokeURLs() { drawerURLs.forEach((u) => URL.revokeObjectURL(u)); drawerURLs = []; }
 
   function drawerHTML(idea) {
@@ -511,7 +526,7 @@
       </div>
       <div class="drawer__foot">
         <button class="btn-danger" id="dwDelete">${I.trash} Excluir</button>
-        <button class="btn-save" id="dwSave">${I.check} Salvar</button>
+        <button class="btn-save" id="dwSave">${I.check} Concluido</button>
       </div>`;
   }
 
@@ -551,7 +566,7 @@
     // ---- mídia ----
     renderMediaList(id);
     g("#dwRecAudio").addEventListener("click", () => startRec("audio", id));
-    g("#dwRecVideo").addEventListener("click", () => startRec("video", id));
+    g("#dwRecVideo").addEventListener("click", () => openVideoCamera(id));
     g("#dwUpload").addEventListener("click", () => {
       const inp = document.createElement("input");
       inp.type = "file"; inp.accept = "image/*,audio/*,video/*"; inp.multiple = true;
@@ -709,8 +724,7 @@
       row.querySelector(".media-del").addEventListener("click", async () => {
         const it = S.getIdea(id); if (!it) return;
         const m = it.media.find((x) => x.id === c.id);
-        it.media = it.media.filter((x) => x.id !== c.id);
-        S.updateIdea(id, { media: it.media });
+        S.addMediaTombstone(id, m || c);
         await M.del(c.id);
         if (m && m.driveFileId && D.isConnected()) D.trash(m.driveFileId).catch(() => {});
         renderMediaList(id);
@@ -762,6 +776,90 @@
   }
 
   // ---- gravação (MediaRecorder) ----
+  function pickVideoFromGallery(ideaId) {
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = "video/*";
+    inp.addEventListener("change", async () => {
+      const f = inp.files && inp.files[0];
+      if (!f) return;
+      await addMediaToIdea(ideaId, { kind: "video", mime: f.type || "video/*", name: f.name, blob: f });
+      if (openId === ideaId) renderMediaList(ideaId);
+      toast("Video adicionado");
+      closeVideoCamera();
+    });
+    inp.click();
+  }
+
+  async function openVideoCamera(ideaId) {
+    if (rec) return;
+    if (!navigator.mediaDevices || !window.MediaRecorder) { toast("Seu navegador nao permite gravar aqui", true); return; }
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: true });
+    } catch (e) {
+      toast("Preciso de acesso a camera e ao microfone", true);
+      return;
+    }
+    const host = document.createElement("div");
+    host.className = "video-capture";
+    host.innerHTML = `
+      <video class="video-capture__preview" autoplay muted playsinline></video>
+      <div class="video-capture__shade top"></div>
+      <div class="video-capture__shade bottom"></div>
+      <button class="video-capture__close" id="vcClose" title="Fechar">${I.x}</button>
+      <div class="video-capture__time"><span class="rec-dot" hidden></span><span id="vcTime">0:00</span></div>
+      <div class="video-capture__controls">
+        <button class="video-capture__gallery" id="vcGallery">${I.image}<span>Galeria</span></button>
+        <button class="video-capture__record" id="vcRecord" title="Gravar"></button>
+      </div>`;
+    document.body.appendChild(host);
+    $(".video-capture__preview", host).srcObject = stream;
+    let mr;
+    try { mr = new MediaRecorder(stream); }
+    catch (e) { stream.getTracks().forEach((t) => t.stop()); host.remove(); toast("Nao consegui iniciar a gravacao", true); return; }
+    const chunks = [];
+    mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    mr.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop());
+      clearInterval(recTimer); recTimer = null;
+      const canceled = rec && rec.canceled;
+      const blob = new Blob(chunks, { type: mr.mimeType || "video/webm" });
+      rec = null;
+      if (canceled || !blob.size) { host.remove(); return; }
+      const stamp = new Date().toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+      try {
+        await addMediaToIdea(ideaId, { kind: "video", mime: blob.type, name: "Video " + stamp, blob });
+        if (openId === ideaId) renderMediaList(ideaId);
+        toast("Video salvo");
+      } catch (e) { toast("Nao consegui salvar o video", true); }
+      host.remove();
+    };
+    rec = { mr, stream, kind: "video", startTs: null, canceled: false, host };
+    $("#vcClose", host).addEventListener("click", closeVideoCamera);
+    $("#vcGallery", host).addEventListener("click", () => pickVideoFromGallery(ideaId));
+    $("#vcRecord", host).addEventListener("click", () => {
+      if (!rec) return;
+      if (rec.startTs) { stopRec(false); return; }
+      rec.startTs = Date.now();
+      host.classList.add("is-recording");
+      $(".rec-dot", host).hidden = false;
+      mr.start();
+      recTimer = setInterval(renderRecTime, 250);
+    });
+  }
+
+  function closeVideoCamera() {
+    if (!rec || rec.kind !== "video") return;
+    rec.canceled = true;
+    try { rec.stream.getTracks().forEach((t) => t.stop()); } catch (e) {}
+    const inactive = !rec.mr || rec.mr.state === "inactive";
+    try { if (!inactive) rec.mr.stop(); } catch (e) {}
+    if (rec.host) rec.host.remove();
+    clearInterval(recTimer); recTimer = null;
+    if (inactive) rec = null;
+  }
+
   async function startRec(kind, ideaId) {
     if (rec) return;
     if (!navigator.mediaDevices || !window.MediaRecorder) { toast("Seu navegador não permite gravar aqui", true); return; }
@@ -801,6 +899,7 @@
     if (!rec) return;
     if (cancel) rec.canceled = true;
     try { if (rec.mr.state !== "inactive") rec.mr.stop(); } catch (e) {}
+    if (rec.kind === "video" && rec.host) rec.host.remove();
   }
 
   function renderRecPanel() {
@@ -821,6 +920,8 @@
     $("#dwRecCancel", drawer).addEventListener("click", () => stopRec(true));
   }
   function renderRecTime() {
+    const vc = rec && rec.host && $("#vcTime", rec.host);
+    if (vc && rec.startTs) vc.textContent = fmtDur((Date.now() - rec.startTs) / 1000);
     const t = drawer && $("#dwRecTime", drawer);
     if (t && rec) t.textContent = fmtDur((Date.now() - rec.startTs) / 1000);
   }
@@ -1440,8 +1541,25 @@
       Sync.setStatus(restored ? "on" : "off");
       if (restored) Sync.pull();
     } else Sync.setStatus("local");
-    if ("serviceWorker" in navigator) navigator.serviceWorker.register("./service-worker.js").catch(() => {});
-    document.documentElement.dataset.appVersion = "36";
+    if ("serviceWorker" in navigator) {
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (refreshing) return;
+        refreshing = true;
+        location.reload();
+      });
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
+        if (sessionStorage.getItem("faisca:reloaded:v40") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v40", "1");
+        location.reload();
+      });
+      navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
+      }
+    }
+    document.documentElement.dataset.appVersion = "40";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia

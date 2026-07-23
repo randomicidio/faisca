@@ -95,6 +95,7 @@
       script: script || "",
       platforms: Array.isArray(i.platforms) ? i.platforms : [],
       media: Array.isArray(i.media) ? i.media.map(normMedia) : [],
+      mediaTombstones: Array.isArray(i.mediaTombstones) ? i.mediaTombstones.map(normMediaTombstone).filter((t) => t.id) : [],
       driveFolderId: i.driveFolderId || null,
       order: i.order != null ? i.order : -(i.created || now()), // menor = mais no topo
       created: i.created || now(),
@@ -112,6 +113,15 @@
       size: m.size || 0,
       order: m.order != null ? m.order : 0,
       driveFileId: m.driveFileId || null,
+    };
+  }
+
+  function normMediaTombstone(t) {
+    t = t || {};
+    return {
+      id: t.id || "",
+      deleted: t.deleted || 0,
+      driveFileId: t.driveFileId || null,
     };
   }
 
@@ -155,6 +165,9 @@
     const i = getIdea(id);
     if (!i) return;
     Object.assign(i, patch);
+    i.media = Array.isArray(i.media) ? i.media.map(normMedia) : [];
+    i.mediaTombstones = Array.isArray(i.mediaTombstones) ? i.mediaTombstones.map(normMediaTombstone).filter((t) => t.id) : [];
+    applyMediaTombstones(i);
     i.updated = now();
     save();
     return i;
@@ -173,13 +186,68 @@
 
   // assinatura do conteúdo — serve para saber se a mesclagem mudou algo de verdade
   function signature() {
-    return JSON.stringify(state.ideas.map((i) => [i.id, i.updated, i.stage, i.order, i.title, i.script, i.platforms, (i.media || []).map((m) => [m.id, m.name, m.order])]))
+    return JSON.stringify(state.ideas.map((i) => [i.id, i.updated, i.stage, i.order, i.title, i.script, i.platforms,
+      (i.media || []).map((m) => [m.id, m.kind, m.mime, m.name, m.size, m.order, m.driveFileId]),
+      (i.mediaTombstones || []).map((t) => [t.id, t.deleted, t.driveFileId]),
+    ]))
       + "|" + state.tombstones.map((t) => t.id).sort().join(",");
   }
 
   function addTombstone(id) {
     const t = state.tombstones.find((x) => x.id === id);
     if (t) t.deleted = now(); else state.tombstones.push({ id, deleted: now() });
+  }
+
+  function applyMediaTombstones(idea) {
+    const tomb = new Map();
+    for (const t of (idea.mediaTombstones || [])) {
+      if (!t.id) continue;
+      const prev = tomb.get(t.id);
+      const nt = normMediaTombstone(t);
+      if (!prev || (nt.deleted || 0) >= (prev.deleted || 0)) tomb.set(t.id, nt);
+      else if (!prev.driveFileId && nt.driveFileId) prev.driveFileId = nt.driveFileId;
+    }
+    if (tomb.size) idea.media = (idea.media || []).filter((m) => !tomb.has(m.id));
+    idea.mediaTombstones = Array.from(tomb.values());
+    return idea;
+  }
+
+  function addMediaTombstone(ideaId, media) {
+    const idea = getIdea(ideaId);
+    if (!idea || !media || !media.id) return;
+    const deleted = now();
+    const existing = (idea.mediaTombstones || []).find((x) => x.id === media.id);
+    if (existing) {
+      existing.deleted = Math.max(existing.deleted || 0, deleted);
+      existing.driveFileId = existing.driveFileId || media.driveFileId || null;
+    } else {
+      idea.mediaTombstones = (idea.mediaTombstones || []).concat({
+        id: media.id,
+        deleted,
+        driveFileId: media.driveFileId || null,
+      });
+    }
+    idea.media = (idea.media || []).filter((m) => m.id !== media.id);
+    updateIdea(ideaId, { media: idea.media, mediaTombstones: idea.mediaTombstones });
+  }
+
+  function mergeIdeaMedia(local, remote, chosen) {
+    const tomb = new Map();
+    for (const t of (local.mediaTombstones || [])) if (t.id) tomb.set(t.id, normMediaTombstone(t));
+    for (const t of (remote.mediaTombstones || [])) {
+      if (!t.id) continue;
+      const prev = tomb.get(t.id);
+      const nt = normMediaTombstone(t);
+      if (!prev || (nt.deleted || 0) >= (prev.deleted || 0)) tomb.set(t.id, nt);
+      else if (!prev.driveFileId && nt.driveFileId) prev.driveFileId = nt.driveFileId;
+    }
+    chosen.mediaTombstones = Array.from(tomb.values());
+    const media = new Map();
+    for (const m of (local.media || [])) media.set(m.id, normMedia(m));
+    for (const m of (remote.media || [])) media.set(m.id, Object.assign(media.get(m.id) || {}, normMedia(m)));
+    for (const m of (chosen.media || [])) media.set(m.id, Object.assign(media.get(m.id) || {}, normMedia(m)));
+    chosen.media = Array.from(media.values()).sort((a, b) => (a.order || 0) - (b.order || 0));
+    return applyMediaTombstones(chosen);
   }
 
   // ---- Mesclagem (sincronização Drive) ----
@@ -191,7 +259,11 @@
     for (const i of state.ideas) byId.set(i.id, i);
     for (const r of remote.ideas) {
       const local = byId.get(r.id);
-      if (!local || (r.updated || 0) > (local.updated || 0)) byId.set(r.id, r);
+      if (!local) byId.set(r.id, r);
+      else {
+        const chosen = (r.updated || 0) > (local.updated || 0) ? r : local;
+        byId.set(r.id, mergeIdeaMedia(local, r, chosen));
+      }
     }
     const tomb = new Map();
     for (const t of state.tombstones) tomb.set(t.id, t.deleted || 0);
@@ -202,7 +274,7 @@
       // relogios dos aparelhos estiverem com horarios diferentes.
       if (item) byId.delete(id);
     }
-    state.ideas = Array.from(byId.values()).sort((a, b) => (b.updated || 0) - (a.updated || 0)).map(normalizeIdea);
+    state.ideas = Array.from(byId.values()).sort((a, b) => (b.updated || 0) - (a.updated || 0)).map((i) => applyMediaTombstones(normalizeIdea(i)));
     state.tombstones = Array.from(tomb, ([id, deleted]) => ({ id, deleted }));
     state.updatedAt = Math.max(state.updatedAt || 0, remote.updatedAt || 0, now());
     state.settings = Object.assign({}, remote.settings || {}, state.settings || {});
@@ -224,7 +296,7 @@
     STAGES, STAGE_PROGRESS, PLATFORMS, SPARKS,
     load, save, subscribe, get: () => state,
     addIdea, getIdea, updateIdea, deleteIdea, setTheme, setSort, setUploadMedia, reorderIdeas, moveIdeaToStageEnd,
-    mergeRemote, exportObject, importObject, addTombstone, signature,
+    mergeRemote, exportObject, importObject, addTombstone, addMediaTombstone, signature,
     uid, now,
     progressOf: (i) => (i.stage === "postado" ? 100 : STAGE_PROGRESS[i.stage] || 0),
     randomSpark: () => SPARKS[Math.floor(Math.random() * SPARKS.length)],
