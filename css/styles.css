@@ -255,7 +255,7 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 .brand { display: flex; align-items: center; gap: 11px; user-select: none; }
 .brand__mark { width: 34px; height: 34px; border-radius: 10px; box-shadow: var(--shadow-sm); flex: none; }
 .brand__name { font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
-.brand__name span { color: var(--accent); }
+.brand__name span { color: inherit; }
 .brand__tag { font-size: 11px; color: var(--text-faint); letter-spacing: .04em; text-transform: uppercase; margin-top: -3px; }
 
 .header-search {
