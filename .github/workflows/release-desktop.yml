@@ -35,13 +35,20 @@ jobs:
             Set-Content -Path electron/secrets.local.json -Value $env:FAISCA_SECRETS_LOCAL_JSON -Encoding UTF8
           }
 
+      - name: Ler versao da release
+        shell: pwsh
+        run: |
+          $version = $env:RELEASE_TAG -replace '^v', ''
+          "APP_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Preparar .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
 
       - name: Gerar app de Windows
-        run: dotnet publish desktop-win/Faisca.csproj -c Release -o dist-webview2/Faisca-Leve
+        shell: pwsh
+        run: dotnet publish desktop-win/Faisca.csproj -c Release "-p:Version=$env:APP_VERSION" -o dist-webview2/Faisca-Leve
 
       - name: Publicar .exe na release
         shell: pwsh
@@ -71,6 +78,14 @@ jobs:
 
       - name: Instalar dependencias
         run: npm ci
+
+      - name: Ler versao da release
+        run: |
+          echo "APP_VERSION=${RELEASE_TAG#v}" >> "$GITHUB_ENV"
+
+      - name: Aplicar versao no pacote Mac
+        run: |
+          node -e "const fs=require('fs'); const f='package.json'; const p=JSON.parse(fs.readFileSync(f,'utf8')); p.version=process.env.APP_VERSION; fs.writeFileSync(f, JSON.stringify(p,null,2)+'\n');"
 
       - name: Preparar segredo local
         run: |
