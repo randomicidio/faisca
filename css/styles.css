@@ -43,8 +43,7 @@
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
   background: #000;
 }
-.video-capture.facing-user .video-capture__preview,
-.video-capture.facing-user video.video-capture__review-media { transform: scaleX(-1); }
+.video-capture.facing-user .video-capture__preview { transform: scaleX(-1); }
 .video-capture__loading {
   position: absolute; inset: 0; display: grid; place-items: center;
   color: rgba(255,255,255,.76); font-size: 14px; font-weight: 750;
@@ -99,7 +98,11 @@
 }
 .video-capture__flip svg { width: 29px; height: 29px; }
 .video-capture.is-recording .video-capture__record {
-  width: 70px; height: 70px; border-width: 22px; background: #fff;
+  width: 70px; height: 70px; border-width: 5px; background: #fff;
+  display: grid; place-items: center;
+}
+.video-capture.is-recording .video-capture__record::after {
+  content: ""; width: 24px; height: 24px; border-radius: 5px; background: #e0342a;
 }
 .video-capture.is-photo .video-capture__record {
   background: #fff; border-color: rgba(255,255,255,.96);
@@ -123,22 +126,31 @@
 .video-capture__review-media {
   width: 100%; height: 100%; object-fit: contain; background: #000;
 }
-.video-capture__review-actions {
-  position: absolute; left: 0; right: 0; bottom: max(26px, env(safe-area-inset-bottom));
-  display: flex; align-items: center; justify-content: space-between; gap: 18px;
-  padding: 0 28px;
+.video-capture__review-top {
+  position: absolute; top: max(18px, env(safe-area-inset-top)); left: 18px; right: 18px;
+  display: flex; justify-content: flex-start;
 }
-.video-capture__retake,
+.video-capture__retake {
+  border: none; width: 54px; height: 54px; border-radius: 50%;
+  display: grid; place-items: center; background: rgba(0,0,0,.42); color: #fff;
+  backdrop-filter: blur(10px);
+}
+.video-capture__caption {
+  position: absolute; left: 16px; right: 16px; bottom: max(20px, env(safe-area-inset-bottom));
+  display: grid; grid-template-columns: minmax(0, 1fr) 58px; gap: 12px; align-items: center;
+}
+.video-capture__caption input {
+  min-width: 0; height: 56px; border: none; border-radius: 999px;
+  background: rgba(9,15,18,.88); color: #fff; padding: 0 20px;
+  font-size: 17px; font-weight: 500; backdrop-filter: blur(10px);
+}
+.video-capture__caption input::placeholder { color: rgba(255,255,255,.78); }
 .video-capture__confirm {
-  border: none; border-radius: 999px; min-height: 48px; padding: 0 20px;
-  font-size: 14px; font-weight: 850; backdrop-filter: blur(10px);
+  border: none; width: 58px; height: 58px; border-radius: 50%;
+  display: grid; place-items: center; background: #54d36b; color: #07120a;
+  box-shadow: 0 5px 18px rgba(0,0,0,.28);
 }
-.video-capture__retake { background: rgba(255,255,255,.16); color: #fff; }
-.video-capture__confirm {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  background: #fff; color: #111; min-width: 96px;
-}
-.video-capture__confirm svg { width: 15px; height: 15px; }
+.video-capture__confirm svg { width: 18px; height: 18px; }
 .video-capture__modes {
   position: absolute; left: 0; right: 0; bottom: max(16px, env(safe-area-inset-bottom));
   display: flex; justify-content: center; gap: 28px; pointer-events: none;

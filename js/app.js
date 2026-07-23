@@ -903,14 +903,23 @@
     preview.srcObject = stream;
     rec.stream = stream;
     host.classList.remove("is-loading");
+    const makeRecorder = () => {
+      if (rec && rec.recordCleanup) rec.recordCleanup();
+      const target = buildVideoRecordStream(preview, rec.stream);
+      rec.recordStream = target.stream;
+      rec.recordCleanup = target.cleanup;
+      return new MediaRecorder(target.stream);
+    };
     let mr;
-    try { mr = new MediaRecorder(stream); }
+    try { mr = makeRecorder(); }
     catch (e) { stream.getTracks().forEach((t) => t.stop()); toast("Nao consegui iniciar a gravacao", true); closeVideoCamera(); return; }
     const chunks = [];
     const attachRecorder = (recorder) => {
       recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
       recorder.onstop = async () => {
       if (rec && rec.stream) rec.stream.getTracks().forEach((t) => t.stop());
+      if (rec && rec.recordCleanup) rec.recordCleanup();
+      if (rec && rec.recordStream && rec.recordStream !== rec.stream) rec.recordStream.getTracks().forEach((t) => t.stop());
       clearInterval(recTimer); recTimer = null;
       const canceled = rec && rec.canceled;
       const blob = new Blob(chunks, { type: recorder.mimeType || "video/webm" });
@@ -923,7 +932,7 @@
         namePrefix: "Video ",
         blob,
         host,
-        previewHTML: (url) => `<video class="video-capture__review-media" controls autoplay loop playsinline src="${url}"></video>`,
+        previewHTML: (url) => `<video class="video-capture__review-media" controls playsinline src="${url}"></video>`,
       });
       };
     };
@@ -936,7 +945,7 @@
         rec.stream.getTracks().forEach((t) => t.stop());
         rec.stream = await getStream();
         preview.srcObject = rec.stream;
-        rec.mr = new MediaRecorder(rec.stream);
+        rec.mr = makeRecorder();
         host.classList.toggle("facing-user", vcFacing === "user");
         host.classList.toggle("facing-environment", vcFacing === "environment");
         attachRecorder(rec.mr);
@@ -958,6 +967,28 @@
       rec.mr.start();
       recTimer = setInterval(renderRecTime, 250);
     });
+  }
+
+  function buildVideoRecordStream(preview, cameraStream) {
+    if (vcFacing !== "user") return { stream: cameraStream, cleanup: null };
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    let raf = 0;
+    const draw = () => {
+      const w = preview.videoWidth || 960;
+      const h = preview.videoHeight || 540;
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+      ctx.save();
+      ctx.translate(w, 0);
+      ctx.scale(-1, 1);
+      try { ctx.drawImage(preview, 0, 0, w, h); } catch (e) {}
+      ctx.restore();
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    const out = canvas.captureStream ? canvas.captureStream(30) : cameraStream;
+    if (out !== cameraStream) cameraStream.getAudioTracks().forEach((t) => out.addTrack(t));
+    return { stream: out, cleanup: () => { if (raf) cancelAnimationFrame(raf); } };
   }
 
   function capturePhoto(ideaId, preview, host) {
@@ -1000,9 +1031,12 @@
     review.className = "video-capture__review";
     review.innerHTML = `
       ${shot.previewHTML(url)}
-      <div class="video-capture__review-actions">
-        <button class="video-capture__retake" id="vcRetake">Regravar</button>
-        <button class="video-capture__confirm" id="vcConfirm">${I.check} Usar</button>
+      <div class="video-capture__review-top">
+        <button class="video-capture__retake" id="vcRetake" title="Voltar">${I.x}</button>
+      </div>
+      <div class="video-capture__caption">
+        <input id="vcCaption" placeholder="Adicione um titulo..." autocomplete="off">
+        <button class="video-capture__confirm" id="vcConfirm" title="Usar">${I.check}</button>
       </div>`;
     host.appendChild(review);
     $("#vcRetake", host).addEventListener("click", () => retakeVideoCamera(ideaId));
@@ -1013,8 +1047,9 @@
     if (!rec || !rec.pendingShot) return;
     const shot = rec.pendingShot;
     const stamp = new Date().toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+    const caption = ($("#vcCaption", rec.host) && $("#vcCaption", rec.host).value.trim()) || "";
     try {
-      await addMediaToIdea(ideaId, { kind: shot.kind, mime: shot.mime, name: shot.namePrefix + stamp, blob: shot.blob });
+      await addMediaToIdea(ideaId, { kind: shot.kind, mime: shot.mime, name: caption || (shot.namePrefix + stamp), blob: shot.blob });
       if (openId === ideaId) renderMediaList(ideaId);
       toast(shot.kind === "image" ? "Foto salva" : "Video salvo");
       closeVideoCamera();
@@ -1025,6 +1060,8 @@
     if (!rec || !rec.host) return;
     const host = rec.host;
     if (rec.pendingURL) URL.revokeObjectURL(rec.pendingURL);
+    if (rec.recordCleanup) rec.recordCleanup();
+    if (rec.recordStream && rec.recordStream !== rec.stream) rec.recordStream.getTracks().forEach((t) => t.stop());
     try { if (rec.stream) rec.stream.getTracks().forEach((t) => t.stop()); } catch (e) {}
     rec = null;
     host.remove();
@@ -1040,6 +1077,8 @@
     rec.canceled = true;
     cameraHistoryActive = false;
     if (rec.pendingURL) URL.revokeObjectURL(rec.pendingURL);
+    if (rec.recordCleanup) rec.recordCleanup();
+    if (rec.recordStream && rec.recordStream !== rec.stream) rec.recordStream.getTracks().forEach((t) => t.stop());
     try { if (rec.stream) rec.stream.getTracks().forEach((t) => t.stop()); } catch (e) {}
     const inactive = !rec.mr || rec.mr.state === "inactive";
     try { if (!inactive) rec.mr.stop(); } catch (e) {}
@@ -1754,8 +1793,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v49") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v49", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v50") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v50", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1763,7 +1802,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "49";
+    document.documentElement.dataset.appVersion = "50";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
