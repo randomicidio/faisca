@@ -43,7 +43,7 @@
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
   background: #000;
 }
-.video-capture.facing-user .video-capture__preview { transform: scaleX(-1); }
+.video-capture.is-mirrored .video-capture__preview { transform: scaleX(-1); }
 .video-capture__loading {
   position: absolute; inset: 0; display: grid; place-items: center;
   color: rgba(255,255,255,.76); font-size: 14px; font-weight: 750;
@@ -73,6 +73,31 @@
   padding: 8px 13px; border-radius: 999px; background: rgba(0,0,0,.42);
   backdrop-filter: blur(10px); font-weight: 800; font-variant-numeric: tabular-nums;
 }
+.video-capture__devices {
+  position: absolute; top: max(74px, calc(env(safe-area-inset-top) + 58px)); left: 18px; right: 18px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; z-index: 1;
+}
+.video-capture__devices label,
+.desktop-media-devices label {
+  min-width: 0; display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 12px; color: #fff; background: rgba(0,0,0,.42); backdrop-filter: blur(10px);
+  font-size: 12px; font-weight: 800;
+}
+.video-capture__devices svg,
+.desktop-media-devices svg { width: 16px; height: 16px; }
+.video-capture__devices select,
+.desktop-media-devices select {
+  min-width: 0; width: 100%; height: 34px; border: 1px solid rgba(255,255,255,.22); border-radius: 8px;
+  color: #fff; background: rgba(10,10,10,.72); font: inherit; padding: 0 8px;
+}
+.video-capture__mirror {
+  position: absolute; right: 18px; top: max(18px, env(safe-area-inset-top));
+  height: 44px; border: none; border-radius: 999px; padding: 0 13px;
+  display: inline-flex; align-items: center; gap: 8px; color: #fff; background: rgba(0,0,0,.38);
+  backdrop-filter: blur(10px); font-size: 12px; font-weight: 850;
+}
+.video-capture__mirror svg { width: 17px; height: 17px; }
+.video-capture__mirror.is-on { background: rgba(255,255,255,.88); color: #080808; }
 .video-capture__controls {
   position: absolute; left: 0; right: 0; bottom: max(64px, calc(env(safe-area-inset-bottom) + 44px));
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
@@ -114,10 +139,14 @@
 }
 @keyframes shotflash { from { opacity: 1; } to { opacity: 0; } }
 .video-capture.is-recording .video-capture__gallery,
-.video-capture.is-recording .video-capture__flip { opacity: .45; pointer-events: none; }
+.video-capture.is-recording .video-capture__flip,
+.video-capture.is-recording .video-capture__mirror,
+.video-capture.is-recording .video-capture__devices { opacity: .45; pointer-events: none; }
 .video-capture.is-review .video-capture__preview,
 .video-capture.is-review .video-capture__controls,
 .video-capture.is-review .video-capture__modes,
+.video-capture.is-review .video-capture__mirror,
+.video-capture.is-review .video-capture__devices,
 .video-capture.is-review .video-capture__time { display: none; }
 .video-capture__review {
   position: absolute; inset: 0; display: grid; grid-template-rows: 1fr auto;
@@ -176,6 +205,19 @@
 }
 .video-capture__modes button.is-active { color: #fff; }
 .video-capture.is-recording .video-capture__modes { opacity: .45; pointer-events: none; }
+.video-capture.is-desktop .video-capture__flip { visibility: hidden; }
+.video-capture.is-desktop .video-capture__modes { bottom: max(22px, env(safe-area-inset-bottom)); }
+
+.desktop-media-devices {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-bottom: 10px;
+}
+.desktop-media-devices label {
+  color: var(--text); background: var(--surface-2); border: 1px solid var(--border);
+  backdrop-filter: none;
+}
+.desktop-media-devices select {
+  color: var(--text); background: var(--surface); border-color: var(--border-strong);
+}
 
 @media (prefers-color-scheme: dark) {
   :root {

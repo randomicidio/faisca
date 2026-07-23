@@ -14,6 +14,7 @@
   const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
   const fmtDur = (s) => { s = Math.floor(s); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
   const fmtSize = (b) => (b > 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1024)) + " KB");
+  const isDesktopCapture = () => !!window.FaiscaDesktopOAuth || (window.matchMedia && matchMedia("(pointer: fine)").matches);
 
   const I = {
     search: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
@@ -53,6 +54,10 @@
   let recTimer = null;
   let vcFacing = "user";
   let cameraHistoryActive = false;
+  let preferredAudioDevice = localStorage.getItem("faisca:audioDevice") || "";
+  let preferredVideoDevice = localStorage.getItem("faisca:videoDevice") || "";
+  let vcMirror = localStorage.getItem("faisca:mirrorCamera");
+  vcMirror = vcMirror == null ? true : vcMirror === "1";
 
   // ---------- scaffold ----------
   const root = document.getElementById("app");
@@ -576,6 +581,9 @@
 
         <div class="field">
           <label>Mídias <span class="label-hint">(ficam salvas neste aparelho)</span></label>
+          <div class="desktop-media-devices" id="dwDevices" hidden>
+            <label>${I.mic}<span>Microfone</span><select id="dwAudioDevice"><option value="">Padrao do sistema</option></select></label>
+          </div>
           <div class="media-actions">
             <button class="media-btn" id="dwRecAudio">${I.mic} Gravar áudio</button>
             <button class="media-btn" id="dwRecVideo">${I.cam} Gravar vídeo/foto</button>
@@ -639,6 +647,7 @@
 
     // ---- mídia ----
     renderMediaList(id);
+    setupDrawerDevices();
     g("#dwRecAudio").addEventListener("click", () => startRec("audio", id));
     g("#dwRecVideo").addEventListener("click", () => openVideoCamera(id));
     g("#dwUpload").addEventListener("click", () => {
@@ -878,7 +887,8 @@
     if (rec) return;
     if (!navigator.mediaDevices || !window.MediaRecorder) { toast("Seu navegador nao permite gravar aqui", true); return; }
     const host = document.createElement("div");
-    host.className = "video-capture is-loading facing-" + vcFacing;
+    const desktop = isDesktopCapture();
+    host.className = "video-capture is-loading " + (desktop ? "is-desktop" : "is-mobile facing-" + vcFacing) + (vcMirror ? " is-mirrored" : "");
     host.innerHTML = `
       <video class="video-capture__preview" autoplay muted playsinline></video>
       <div class="video-capture__loading">Iniciando camera...</div>
@@ -886,6 +896,11 @@
       <div class="video-capture__shade bottom"></div>
       <button class="video-capture__close" id="vcClose" title="Fechar">${I.x}</button>
       <div class="video-capture__time"><span class="rec-dot" hidden></span><span id="vcTime">0:00</span></div>
+      <div class="video-capture__devices" id="vcDevices" ${desktop ? "" : "hidden"}>
+        <label>${I.cam}<span>Camera</span><select id="vcVideoDevice"><option value="">Padrao do sistema</option></select></label>
+        <label>${I.mic}<span>Microfone</span><select id="vcAudioDevice"><option value="">Padrao do sistema</option></select></label>
+      </div>
+      <button class="video-capture__mirror ${vcMirror ? "is-on" : ""}" id="vcMirror" title="Espelhar camera">${I.refresh}<span>Espelho</span></button>
       <div class="video-capture__controls">
         <button class="video-capture__gallery" id="vcGallery" title="Galeria">${I.image}</button>
         <button class="video-capture__record" id="vcRecord" title="Gravar"></button>
@@ -905,8 +920,10 @@
     $("#vcClose", host).addEventListener("click", () => closeVideoCamera());
     $("#vcGallery", host).addEventListener("click", () => pickMediaFromGallery(ideaId));
     const constraints = () => ({
-      video: { facingMode: { ideal: vcFacing }, width: { ideal: 960 }, height: { ideal: 540 } },
-      audio: true,
+      video: preferredVideoDevice
+        ? { deviceId: { exact: preferredVideoDevice }, width: { ideal: 1280 }, height: { ideal: 720 } }
+        : (desktop ? { width: { ideal: 1280 }, height: { ideal: 720 } } : { facingMode: { ideal: vcFacing }, width: { ideal: 960 }, height: { ideal: 540 } }),
+      audio: preferredAudioDevice ? { deviceId: { exact: preferredAudioDevice } } : true,
     });
     const getStream = async () => navigator.mediaDevices.getUserMedia(constraints());
     let stream;
@@ -916,6 +933,27 @@
     preview.srcObject = stream;
     rec.stream = stream;
     host.classList.remove("is-loading");
+    $("#vcMirror", host).addEventListener("click", () => {
+      if (rec && rec.startTs) return;
+      vcMirror = !vcMirror;
+      localStorage.setItem("faisca:mirrorCamera", vcMirror ? "1" : "0");
+      host.classList.toggle("is-mirrored", vcMirror);
+      $("#vcMirror", host).classList.toggle("is-on", vcMirror);
+      if (rec && rec.stream && rec.mr && rec.mr.state === "inactive") {
+        rec.mr = makeRecorder();
+        attachRecorder(rec.mr);
+      }
+    });
+    if (desktop) setupVideoCaptureDevices(host, async () => {
+      if (!rec || rec.startTs || !rec.stream) return;
+      try {
+        rec.stream.getTracks().forEach((t) => t.stop());
+        rec.stream = await getStream();
+        preview.srcObject = rec.stream;
+        rec.mr = makeRecorder();
+        attachRecorder(rec.mr);
+      } catch (e) { toast("Nao consegui trocar a entrada", true); }
+    });
     const makeRecorder = () => {
       if (rec && rec.recordCleanup) rec.recordCleanup();
       const target = buildVideoRecordStream(preview, rec.stream);
@@ -952,6 +990,7 @@
     attachRecorder(mr);
     rec.mr = mr;
     $("#vcFlip", host).addEventListener("click", async () => {
+      if (desktop) return;
       if (!rec || rec.startTs || !rec.stream) return;
       vcFacing = vcFacing === "environment" ? "user" : "environment";
       try {
@@ -983,7 +1022,7 @@
   }
 
   function buildVideoRecordStream(preview, cameraStream) {
-    if (vcFacing !== "user") return { stream: cameraStream, cleanup: null };
+    if (!vcMirror) return { stream: cameraStream, cleanup: null };
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     let raf = 0;
@@ -1010,7 +1049,7 @@
     canvas.width = preview.videoWidth;
     canvas.height = preview.videoHeight;
     const ctx = canvas.getContext("2d");
-    if (vcFacing === "user") {
+    if (vcMirror) {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
     }
@@ -1121,12 +1160,55 @@
     if (inactive) rec = null;
   }
 
+  async function setupDrawerDevices() {
+    const box = drawer && $("#dwDevices", drawer);
+    if (!box || !isDesktopCapture() || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+    box.hidden = false;
+    await populateDeviceSelect($("#dwAudioDevice", drawer), "audioinput", preferredAudioDevice);
+    const audioSel = $("#dwAudioDevice", drawer);
+    if (audioSel) audioSel.addEventListener("change", () => {
+      preferredAudioDevice = audioSel.value;
+      localStorage.setItem("faisca:audioDevice", preferredAudioDevice);
+      toast(preferredAudioDevice ? "Microfone selecionado" : "Usando microfone padrao");
+    });
+  }
+
+  async function setupVideoCaptureDevices(host, onChange) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+    await populateDeviceSelect($("#vcVideoDevice", host), "videoinput", preferredVideoDevice);
+    await populateDeviceSelect($("#vcAudioDevice", host), "audioinput", preferredAudioDevice);
+    const videoSel = $("#vcVideoDevice", host);
+    const audioSel = $("#vcAudioDevice", host);
+    const changed = async () => {
+      preferredVideoDevice = videoSel ? videoSel.value : "";
+      preferredAudioDevice = audioSel ? audioSel.value : "";
+      localStorage.setItem("faisca:videoDevice", preferredVideoDevice);
+      localStorage.setItem("faisca:audioDevice", preferredAudioDevice);
+      await onChange();
+    };
+    if (videoSel) videoSel.addEventListener("change", changed);
+    if (audioSel) audioSel.addEventListener("change", changed);
+  }
+
+  async function populateDeviceSelect(sel, kind, selected) {
+    if (!sel) return;
+    let devices = [];
+    try { devices = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === kind); }
+    catch (e) { return; }
+    const fallback = kind === "videoinput" ? "Camera" : "Microfone";
+    sel.innerHTML = `<option value="">Padrao do sistema</option>` + devices.map((d, i) =>
+      `<option value="${esc(d.deviceId)}">${esc(d.label || `${fallback} ${i + 1}`)}</option>`
+    ).join("");
+    if (selected && devices.some((d) => d.deviceId === selected)) sel.value = selected;
+  }
+
   async function startRec(kind, ideaId) {
     if (rec) return;
     if (!navigator.mediaDevices || !window.MediaRecorder) { toast("Seu navegador não permite gravar aqui", true); return; }
     let stream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia(kind === "video" ? { video: { facingMode: "user" }, audio: true } : { audio: true });
+      const audio = preferredAudioDevice ? { deviceId: { exact: preferredAudioDevice } } : true;
+      stream = await navigator.mediaDevices.getUserMedia(kind === "video" ? { video: { facingMode: "user" }, audio } : { audio });
     } catch (e) {
       toast(kind === "video" ? "Preciso de acesso à câmera e ao microfone" : "Preciso de acesso ao microfone", true);
       return;
@@ -1827,8 +1909,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v53") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v53", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v54") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v54", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1836,7 +1918,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "53";
+    document.documentElement.dataset.appVersion = "54";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
