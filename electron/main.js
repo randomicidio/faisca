@@ -13,6 +13,7 @@ const APP_URL = "https://randomicidio.github.io/faisca/";
 //  Windows. Assim dá pra levar a pasta inteira num pendrive.
 // ============================================================
 function tornarPortatil() {
+  if (process.platform !== "win32") return;
   if (!app.isPackaged) return;   // em desenvolvimento o .exe é o do Electron
   const destino = path.join(path.dirname(app.getPath("exe")), "Dados do Faisca");
   const antigo = app.getPath("userData");   // precisa ser lido antes de trocar
