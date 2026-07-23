@@ -890,18 +890,6 @@
     document.body.appendChild(host);
     const preview = $(".video-capture__preview", host);
     preview.srcObject = stream;
-    const lastMedia = (S.getIdea(ideaId).media || []).slice().reverse().find((m) => m.kind === "video" || m.kind === "image");
-    if (lastMedia) {
-      M.get(lastMedia.id).then((blob) => {
-        if (!blob || !document.body.contains(host)) return;
-        const url = URL.createObjectURL(blob);
-        drawerURLs.push(url);
-        const gallery = $("#vcGallery", host);
-        if (gallery) gallery.innerHTML = lastMedia.kind === "video"
-          ? `<video muted playsinline preload="metadata" src="${url}"></video>`
-          : `<img src="${url}" alt="">`;
-      }).catch(() => {});
-    }
     let mr;
     try { mr = new MediaRecorder(stream); }
     catch (e) { stream.getTracks().forEach((t) => t.stop()); host.remove(); toast("Nao consegui iniciar a gravacao", true); return; }
@@ -913,15 +901,17 @@
       clearInterval(recTimer); recTimer = null;
       const canceled = rec && rec.canceled;
       const blob = new Blob(chunks, { type: recorder.mimeType || "video/webm" });
-      rec = null;
-      if (canceled || !blob.size) { host.remove(); return; }
-      const stamp = new Date().toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-      try {
-        await addMediaToIdea(ideaId, { kind: "video", mime: blob.type, name: "Video " + stamp, blob });
-        if (openId === ideaId) renderMediaList(ideaId);
-        toast("Video salvo");
-      } catch (e) { toast("Nao consegui salvar o video", true); }
-      host.remove();
+      const current = rec;
+      if (current) current.startTs = null;
+      if (canceled || !blob.size) { rec = null; host.remove(); return; }
+      showCaptureReview(ideaId, {
+        kind: "video",
+        mime: blob.type,
+        namePrefix: "Video ",
+        blob,
+        host,
+        previewHTML: (url) => `<video class="video-capture__review-media" controls autoplay loop playsinline src="${url}"></video>`,
+      });
       };
     };
     attachRecorder(mr);
@@ -966,20 +956,68 @@
     ctx.drawImage(preview, 0, 0, canvas.width, canvas.height);
     canvas.toBlob(async (blob) => {
       if (!blob) { toast("Nao consegui salvar a foto", true); return; }
-      const stamp = new Date().toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-      try {
-        await addMediaToIdea(ideaId, { kind: "image", mime: blob.type || "image/jpeg", name: "Foto " + stamp, blob });
-        if (openId === ideaId) renderMediaList(ideaId);
-        host.classList.add("did-shot");
-        setTimeout(() => host.classList.remove("did-shot"), 180);
-        toast("Foto salva");
-      } catch (e) { toast("Nao consegui salvar a foto", true); }
+      showCaptureReview(ideaId, {
+        kind: "image",
+        mime: blob.type || "image/jpeg",
+        namePrefix: "Foto ",
+        blob,
+        host,
+        previewHTML: (url) => `<img class="video-capture__review-media" src="${url}" alt="">`,
+      });
     }, "image/jpeg", 0.92);
+  }
+
+  function showCaptureReview(ideaId, shot) {
+    if (!rec || !shot || !shot.blob) return;
+    const host = shot.host;
+    const old = $(".video-capture__review", host);
+    if (old) old.remove();
+    const url = URL.createObjectURL(shot.blob);
+    rec.pendingURL = url;
+    rec.pendingShot = shot;
+    host.classList.add("is-review");
+    host.classList.remove("is-recording", "is-photo", "did-shot");
+    $(".rec-dot", host).hidden = true;
+    $("#vcTime", host).textContent = "0:00";
+    const review = document.createElement("div");
+    review.className = "video-capture__review";
+    review.innerHTML = `
+      ${shot.previewHTML(url)}
+      <div class="video-capture__review-actions">
+        <button class="video-capture__retake" id="vcRetake">Regravar</button>
+        <button class="video-capture__confirm" id="vcConfirm">${I.check} Usar</button>
+      </div>`;
+    host.appendChild(review);
+    $("#vcRetake", host).addEventListener("click", () => retakeVideoCamera(ideaId));
+    $("#vcConfirm", host).addEventListener("click", () => confirmCapture(ideaId));
+  }
+
+  async function confirmCapture(ideaId) {
+    if (!rec || !rec.pendingShot) return;
+    const shot = rec.pendingShot;
+    const stamp = new Date().toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+    try {
+      await addMediaToIdea(ideaId, { kind: shot.kind, mime: shot.mime, name: shot.namePrefix + stamp, blob: shot.blob });
+      if (openId === ideaId) renderMediaList(ideaId);
+      toast(shot.kind === "image" ? "Foto salva" : "Video salvo");
+      closeVideoCamera();
+    } catch (e) { toast(shot.kind === "image" ? "Nao consegui salvar a foto" : "Nao consegui salvar o video", true); }
+  }
+
+  function retakeVideoCamera(ideaId) {
+    if (!rec || !rec.host) return;
+    const host = rec.host;
+    if (rec.pendingURL) URL.revokeObjectURL(rec.pendingURL);
+    try { if (rec.stream) rec.stream.getTracks().forEach((t) => t.stop()); } catch (e) {}
+    rec = null;
+    host.remove();
+    openVideoCamera(ideaId);
   }
 
   function closeVideoCamera() {
     if (!rec || rec.kind !== "video") return;
     rec.canceled = true;
+    if (rec.pendingURL) URL.revokeObjectURL(rec.pendingURL);
     try { rec.stream.getTracks().forEach((t) => t.stop()); } catch (e) {}
     const inactive = !rec.mr || rec.mr.state === "inactive";
     try { if (!inactive) rec.mr.stop(); } catch (e) {}
@@ -1027,7 +1065,7 @@
     if (!rec) return;
     if (cancel) rec.canceled = true;
     try { if (rec.mr.state !== "inactive") rec.mr.stop(); } catch (e) {}
-    if (rec.kind === "video" && rec.host) rec.host.remove();
+    if (rec.kind === "video" && rec.host && cancel) rec.host.remove();
   }
 
   function renderRecPanel() {
@@ -1694,8 +1732,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v47") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v47", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v48") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v48", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1703,7 +1741,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "47";
+    document.documentElement.dataset.appVersion = "48";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia

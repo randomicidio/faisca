@@ -104,6 +104,33 @@
 @keyframes shotflash { from { opacity: 1; } to { opacity: 0; } }
 .video-capture.is-recording .video-capture__gallery,
 .video-capture.is-recording .video-capture__flip { opacity: .45; pointer-events: none; }
+.video-capture.is-review .video-capture__preview,
+.video-capture.is-review .video-capture__controls,
+.video-capture.is-review .video-capture__modes,
+.video-capture.is-review .video-capture__time { display: none; }
+.video-capture__review {
+  position: absolute; inset: 0; display: grid; grid-template-rows: 1fr auto;
+  background: #000; z-index: 2;
+}
+.video-capture__review-media {
+  width: 100%; height: 100%; object-fit: contain; background: #000;
+}
+.video-capture__review-actions {
+  position: absolute; left: 0; right: 0; bottom: max(26px, env(safe-area-inset-bottom));
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  padding: 0 28px;
+}
+.video-capture__retake,
+.video-capture__confirm {
+  border: none; border-radius: 999px; min-height: 48px; padding: 0 20px;
+  font-size: 14px; font-weight: 850; backdrop-filter: blur(10px);
+}
+.video-capture__retake { background: rgba(255,255,255,.16); color: #fff; }
+.video-capture__confirm {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: #fff; color: #111; min-width: 96px;
+}
+.video-capture__confirm svg { width: 15px; height: 15px; }
 .video-capture__modes {
   position: absolute; left: 0; right: 0; bottom: max(16px, env(safe-area-inset-bottom));
   display: flex; justify-content: center; gap: 28px; pointer-events: none;
