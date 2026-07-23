@@ -199,7 +199,6 @@
       convite.prompt();
       try { await convite.userChoice; } catch (e) {}
       convite = null;
-      return;
     }
     comoInstalarModal();
   }
@@ -303,7 +302,6 @@
           <h2>Toda grande postagem começou como uma faísca solta.</h2>
           <p>Joga sua primeira ideia lá em cima — nem precisa estar boa ainda. Depois é só ir empurrando ela pelas etapas até virar conteúdo.</p>
         </div>`;
-      return;
     }
     // Lista única. A ordem exibida é a ordem manual salva.
     const ideas = visibleIdeas().slice().sort((a, b) => {
@@ -373,6 +371,7 @@
     const fill = $("i", bar);
     const label = $(".mini-stage", el);
     let arrastando = false;
+    let gesto = null;
     let alvo = S.STAGES.find((s) => s.key === idea.stage) || S.STAGES[0];
 
     // faixas iguais: cada etapa ocupa o mesmo pedaço da barra, senão
@@ -390,19 +389,29 @@
     };
 
     bar.addEventListener("pointerdown", (e) => {
-      e.preventDefault(); e.stopPropagation();
-      arrastando = true;
-      el.draggable = false;          // não deixa o arraste de reordenar começar
-      bar.classList.add("is-live");
-      try { bar.setPointerCapture(e.pointerId); } catch (x) {}
-      alvo = etapaEmX(e.clientX); pintar(alvo);
+      e.stopPropagation();
+      gesto = { id: e.pointerId, x: e.clientX, y: e.clientY };
+      alvo = S.STAGES.find((s) => s.key === idea.stage) || S.STAGES[0];
     });
     bar.addEventListener("pointermove", (e) => {
-      if (!arrastando) return;
+      if (!gesto || e.pointerId !== gesto.id) return;
+      const dx = e.clientX - gesto.x;
+      const dy = e.clientY - gesto.y;
+      if (!arrastando) {
+        if (Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) { gesto = null; return; }
+        if (Math.abs(dx) < 16 || Math.abs(dx) < Math.abs(dy) * 1.35) return;
+        arrastando = true;
+        el.draggable = false;
+        bar.classList.add("is-live");
+        try { bar.setPointerCapture(e.pointerId); } catch (x) {}
+      }
+      e.preventDefault(); e.stopPropagation();
       const s = etapaEmX(e.clientX);
       if (s.key !== alvo.key) { alvo = s; pintar(s); }
     });
     const soltar = (e) => {
+      if (!gesto || e.pointerId !== gesto.id) return;
+      gesto = null;
       if (!arrastando) return;
       arrastando = false;
       el.draggable = true;
@@ -1480,7 +1489,7 @@
   function aboutModal() {
     const cfg = window.FAISCA_CONFIG || {};
     const appVersion = cfg.APP_VERSION || "1.0.1";
-    const buildVersion = cfg.BUILD_VERSION || "v64";
+    const buildVersion = cfg.BUILD_VERSION || "v65";
     const runtime = window.FaiscaDesktopOAuth ? "Aplicativo de computador" : "Web / celular";
     const syncState = D.isConnected() ? "Google Drive conectado" : "Somente neste aparelho";
     const sessionMode = window.FaiscaDesktopOAuth
@@ -1951,7 +1960,7 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        const buildVersion = (window.FAISCA_CONFIG && window.FAISCA_CONFIG.BUILD_VERSION) || "v64";
+        const buildVersion = (window.FAISCA_CONFIG && window.FAISCA_CONFIG.BUILD_VERSION) || "v65";
         const reloadKey = `faisca:reloaded:${buildVersion}`;
         if (sessionStorage.getItem(reloadKey) === "1") return;
         sessionStorage.setItem(reloadKey, "1");

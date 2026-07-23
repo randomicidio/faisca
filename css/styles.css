@@ -864,7 +864,7 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 /* A barra é um controle de 4 posições, mas em repouso continua só uma barra.
    O retorno vem da própria barra engrossando ao pegar nela. */
 .mini-prog {
-  position: relative; cursor: ew-resize; touch-action: none;
+  position: relative; cursor: ew-resize; touch-action: pan-y;
   transition: height .12s;
 }
 .mini-prog::before { content: ""; position: absolute; inset: -11px 0; }  /* área de toque */
