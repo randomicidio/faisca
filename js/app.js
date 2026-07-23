@@ -51,7 +51,6 @@
   let rec = null;       // gravação em andamento
   let recTimer = null;
   let vcFacing = "environment";
-  let vcRatio = "9:16";
 
   // ---------- scaffold ----------
   const root = document.getElementById("app");
@@ -862,9 +861,8 @@
   async function openVideoCamera(ideaId) {
     if (rec) return;
     if (!navigator.mediaDevices || !window.MediaRecorder) { toast("Seu navegador nao permite gravar aqui", true); return; }
-    const ratioValue = () => vcRatio === "1:1" ? 1 : vcRatio === "16:9" ? 16 / 9 : 9 / 16;
     const constraints = () => ({
-      video: { facingMode: { ideal: vcFacing }, aspectRatio: { ideal: ratioValue() }, width: { ideal: 1080 }, height: { ideal: 1920 } },
+      video: { facingMode: { ideal: vcFacing }, width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: true,
     });
     const getStream = async () => navigator.mediaDevices.getUserMedia(constraints());
@@ -872,29 +870,33 @@
     try { stream = await getStream(); }
     catch (e) { toast("Preciso de acesso a camera e ao microfone", true); return; }
     const host = document.createElement("div");
-    host.className = "video-capture ratio-" + vcRatio.replace(":", "-");
+    host.className = "video-capture";
     host.innerHTML = `
       <video class="video-capture__preview" autoplay muted playsinline></video>
       <div class="video-capture__shade top"></div>
       <div class="video-capture__shade bottom"></div>
       <button class="video-capture__close" id="vcClose" title="Fechar">${I.x}</button>
       <div class="video-capture__time"><span class="rec-dot" hidden></span><span id="vcTime">0:00</span></div>
-      <div class="video-capture__tools">
-        <button class="video-capture__tool" id="vcFlip" title="Trocar camera">${I.refresh}<span>Virar</span></button>
-        <div class="video-capture__ratios" id="vcRatios">
-          <button data-ratio="9:16">9:16</button>
-          <button data-ratio="1:1">1:1</button>
-          <button data-ratio="16:9">16:9</button>
-        </div>
-      </div>
       <div class="video-capture__controls">
-        <button class="video-capture__gallery" id="vcGallery">${I.image}<span>Galeria</span></button>
+        <button class="video-capture__gallery" id="vcGallery" title="Galeria">${I.image}</button>
         <button class="video-capture__record" id="vcRecord" title="Gravar"></button>
+        <button class="video-capture__flip" id="vcFlip" title="Trocar camera">${I.refresh}</button>
       </div>`;
     document.body.appendChild(host);
     const preview = $(".video-capture__preview", host);
     preview.srcObject = stream;
-    $$("[data-ratio]", host).forEach((b) => b.classList.toggle("is-active", b.dataset.ratio === vcRatio));
+    const lastMedia = (S.getIdea(ideaId).media || []).slice().reverse().find((m) => m.kind === "video" || m.kind === "image");
+    if (lastMedia) {
+      M.get(lastMedia.id).then((blob) => {
+        if (!blob || !document.body.contains(host)) return;
+        const url = URL.createObjectURL(blob);
+        drawerURLs.push(url);
+        const gallery = $("#vcGallery", host);
+        if (gallery) gallery.innerHTML = lastMedia.kind === "video"
+          ? `<video muted playsinline preload="metadata" src="${url}"></video>`
+          : `<img src="${url}" alt="">`;
+      }).catch(() => {});
+    }
     let mr;
     try { mr = new MediaRecorder(stream); }
     catch (e) { stream.getTracks().forEach((t) => t.stop()); host.remove(); toast("Nao consegui iniciar a gravacao", true); return; }
@@ -931,20 +933,6 @@
         rec.mr = new MediaRecorder(rec.stream);
         attachRecorder(rec.mr);
       } catch (e) { toast("Nao consegui trocar a camera", true); }
-    });
-    $("#vcRatios", host).addEventListener("click", async (e) => {
-      const b = e.target.closest("[data-ratio]"); if (!b || !rec || rec.startTs) return;
-      vcRatio = b.dataset.ratio;
-      host.classList.remove("ratio-9-16", "ratio-1-1", "ratio-16-9");
-      host.classList.add("ratio-" + vcRatio.replace(":", "-"));
-      $$("[data-ratio]", host).forEach((x) => x.classList.toggle("is-active", x === b));
-      try {
-        rec.stream.getTracks().forEach((t) => t.stop());
-        rec.stream = await getStream();
-        preview.srcObject = rec.stream;
-        rec.mr = new MediaRecorder(rec.stream);
-        attachRecorder(rec.mr);
-      } catch (err) {}
     });
     $("#vcRecord", host).addEventListener("click", () => {
       if (!rec) return;
@@ -1674,8 +1662,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v45") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v45", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v46") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v46", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1683,7 +1671,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "45";
+    document.documentElement.dataset.appVersion = "46";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
