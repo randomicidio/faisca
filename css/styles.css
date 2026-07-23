@@ -77,6 +77,8 @@
   position: absolute; top: max(74px, calc(env(safe-area-inset-top) + 58px)); left: 18px; right: 18px;
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; z-index: 1;
 }
+.video-capture__devices[hidden],
+.desktop-media-devices[hidden] { display: none !important; }
 .video-capture__devices label,
 .desktop-media-devices label {
   min-width: 0; display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 8px;

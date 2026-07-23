@@ -1917,8 +1917,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v56") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v56", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v57") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v57", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1926,7 +1926,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "56";
+    document.documentElement.dataset.appVersion = "57";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
