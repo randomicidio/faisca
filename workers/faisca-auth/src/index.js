@@ -49,6 +49,21 @@ function appReturn(env) {
   return env.APP_ORIGIN + env.APP_PATH;
 }
 
+function validReturnTo(value, env) {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    const allowedBase = new URL(appReturn(env));
+    const allowedPaths = new Set([
+      allowedBase.pathname,
+      allowedBase.pathname.replace(/\/$/, "/index.html"),
+    ]);
+    return url.origin === allowedBase.origin && allowedPaths.has(url.pathname) && !url.search;
+  } catch {
+    return false;
+  }
+}
+
 async function googleToken(body) {
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -63,9 +78,12 @@ async function googleToken(body) {
 async function start(request, env) {
   const url = new URL(request.url);
   const returnTo = url.searchParams.get("return_to");
-  if (returnTo !== appReturn(env)) return json({ error: "Destino invalido." }, 400);
+  if (!validReturnTo(returnTo, env)) return json({ error: "Destino invalido." }, 400);
   const state = randomId();
-  await env.SESSIONS.put(`state:${state}`, JSON.stringify({ selectAccount: url.searchParams.get("select_account") === "1" }), { expirationTtl: STATE_TTL });
+  await env.SESSIONS.put(`state:${state}`, JSON.stringify({
+    returnTo,
+    selectAccount: url.searchParams.get("select_account") === "1",
+  }), { expirationTtl: STATE_TTL });
   const callback = url.origin + "/auth/callback";
   const google = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   google.searchParams.set("client_id", env.GOOGLE_WEB_CLIENT_ID);
@@ -85,6 +103,8 @@ async function callback(request, env) {
   await env.SESSIONS.delete(`state:${state}`);
   if (!stored || !url.searchParams.get("code")) return new Response("Nao foi possivel concluir o login. Volte ao Faisca e tente novamente.", { status: 400 });
   try {
+    const stateData = JSON.parse(stored);
+    const returnTo = validReturnTo(stateData.returnTo, env) ? stateData.returnTo : appReturn(env);
     const token = await googleToken({
       client_id: env.GOOGLE_WEB_CLIENT_ID,
       client_secret: env.GOOGLE_WEB_CLIENT_SECRET,
@@ -95,7 +115,7 @@ async function callback(request, env) {
     if (!token.refresh_token) throw new Error("O Google nao devolveu a credencial de renovacao.");
     const session = randomId();
     await env.SESSIONS.put(`session:${session}`, JSON.stringify({ refresh: await encrypt(token.refresh_token, env) }), { expirationTtl: SESSION_TTL });
-    return Response.redirect(`${appReturn(env)}#faisca_session=${encodeURIComponent(session)}`, 302);
+    return Response.redirect(`${returnTo}#faisca_session=${encodeURIComponent(session)}`, 302);
   } catch (error) {
     return new Response(`Nao foi possivel concluir o login: ${error.message}`, { status: 500, headers: { "Content-Type": "text/plain; charset=utf-8" } });
   }
