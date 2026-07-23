@@ -10,7 +10,7 @@
 
 window.FAISCA_CONFIG = {
   APP_VERSION: "1.0.1",
-  BUILD_VERSION: "v68",
+  BUILD_VERSION: "v69",
 
   // Cole aqui o seu Client ID (termina em .apps.googleusercontent.com)
   GOOGLE_CLIENT_ID: "1060218621029-94iml7nmubbv0mdeos1qeqs2js49pfqp.apps.googleusercontent.com",

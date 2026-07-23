@@ -1,14 +1,14 @@
 // Faísca — service worker (funciona offline)
-const CACHE = "faisca-v68";
+const CACHE = "faisca-v69";
 const ASSETS = [
   "./",
   "./index.html",
-  "./css/styles.css?v=68",
-  "./js/config.js?v=68",
-  "./js/store.js?v=68",
-  "./js/media.js?v=68",
-  "./js/drive.js?v=68",
-  "./js/app.js?v=68",
+  "./css/styles.css?v=69",
+  "./js/config.js?v=69",
+  "./js/store.js?v=69",
+  "./js/media.js?v=69",
+  "./js/drive.js?v=69",
+  "./js/app.js?v=69",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

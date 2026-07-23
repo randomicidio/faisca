@@ -56,6 +56,7 @@
   let openId = null;
   let boardFrozen = false;
   let dragId = null;
+  let freshIdeaId = null;
   let currentSpark = S.randomSpark();
   let drawerURLs = [];
   let rec = null;       // gravação em andamento
@@ -138,7 +139,11 @@
     const inp = $("#capture");
     const title = inp.value.trim();
     if (!title) { inp.focus(); return; }
-    S.addIdea({ title });
+    const idea = S.addIdea({ title });
+    freshIdeaId = idea.id;
+    setTimeout(() => {
+      if (freshIdeaId === idea.id) { freshIdeaId = null; renderBoard(); }
+    }, 2600);
     inp.value = "";
     inp.blur();
     toast("Ideia capturada ✨");
@@ -340,6 +345,7 @@
     const stage = S.STAGES.find((s) => s.key === idea.stage) || S.STAGES[0];
     const el = document.createElement("article");
     el.className = "card stage-" + idea.stage + (idea.stage === "postado" ? " is-posted" : "");
+    if (idea.id === freshIdeaId) el.classList.add("is-fresh");
     el.draggable = true;
     el.dataset.id = idea.id;
     el.innerHTML = `
@@ -1528,7 +1534,7 @@
   function aboutModal() {
     const cfg = window.FAISCA_CONFIG || {};
     const appVersion = cfg.APP_VERSION || "1.0.1";
-    const buildVersion = cfg.BUILD_VERSION || "v68";
+    const buildVersion = cfg.BUILD_VERSION || "v69";
     const runtime = window.FaiscaDesktopOAuth ? "Aplicativo de computador" : "Web / celular";
     const syncState = D.isConnected() ? "Google Drive conectado" : "Somente neste aparelho";
     const sessionMode = window.FaiscaDesktopOAuth
@@ -2001,7 +2007,7 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        const buildVersion = (window.FAISCA_CONFIG && window.FAISCA_CONFIG.BUILD_VERSION) || "v68";
+        const buildVersion = (window.FAISCA_CONFIG && window.FAISCA_CONFIG.BUILD_VERSION) || "v69";
         const reloadKey = `faisca:reloaded:${buildVersion}`;
         if (sessionStorage.getItem(reloadKey) === "1") return;
         sessionStorage.setItem(reloadKey, "1");
