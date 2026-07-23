@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Faisca</AssemblyName>
+    <RootNamespace>Faisca</RootNamespace>
+    <ApplicationIcon>..\icons\faisca.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <Product>Faísca</Product>
+    <AssemblyTitle>Faísca</AssemblyTitle>
+    <Company>Din Content</Company>
+
+    <!-- Um arquivo só, sem precisar de .NET instalado na máquina de quem usa -->
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>none</DebugType>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- WinForms nao suporta trimming (NETSDK1175), entao ficamos no
+         self-contained puro: ~49 MB e nenhuma instalacao necessaria. -->
+    <AllowedReferenceRelatedFileExtensions>none</AllowedReferenceRelatedFileExtensions>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+  </ItemGroup>
+
+</Project>

@@ -3,3 +3,6 @@ dist/
 dist-packager/
 electron/secrets.local.json
 npm-debug.log*
+desktop-win/bin/
+desktop-win/obj/
+dist-webview2/
