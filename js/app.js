@@ -490,11 +490,9 @@
     return `
       <div class="drawer__head">
         <textarea class="drawer__title-input" id="dwTitle" rows="1" placeholder="Titulo da ideia...">${esc(idea.title)}</textarea>
-        <button class="icon-btn" id="dwClose" title="Fechar">${I.x}</button>
       </div>
       <div class="drawer__body">
         <div class="drawer__title-meta">
-          <span class="head-stage" id="dwHeadStage">${S.STAGES.find((s) => s.key === idea.stage).label}</span>
           <div class="drawer__created">Criada em ${created.getDate()} ${MESES[created.getMonth()]} ${created.getFullYear()}</div>
         </div>
 
@@ -524,9 +522,12 @@
           <label>Postei em</label>
           <div class="chips" id="dwPlats">${platChips}</div>
         </div>
+
+        <div class="drawer__delete-row">
+          <button class="btn-danger" id="dwDelete">${I.trash} Excluir</button>
+        </div>
       </div>
       <div class="drawer__foot">
-        <button class="btn-danger" id="dwDelete">${I.trash} Excluir</button>
         <button class="btn-save" id="dwSave">${I.check} Concluido</button>
       </div>`;
   }
@@ -534,8 +535,6 @@
   function bindDrawer(idea) {
     const id = idea.id;
     const g = (s) => $(s, drawer);
-
-    g("#dwClose").addEventListener("click", closeDrawer);
 
     const title = g("#dwTitle");
     const grow = (t) => { t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; };
@@ -550,8 +549,6 @@
       $$(".stage-pick", drawer).forEach((x) => x.classList.toggle("is-active", x === b));
       const p = S.progressOf(S.getIdea(id));
       g("#dwProgBar").style.width = p + "%"; g("#dwProgPct").textContent = p + "%";
-      const headStage = g("#dwHeadStage");
-      if (headStage) headStage.textContent = S.STAGES.find((s) => s.key === b.dataset.stage).label;
     });
 
     const script = g("#dwScript");
@@ -1608,8 +1605,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v41") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v41", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v42") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v42", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1617,7 +1614,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "41";
+    document.documentElement.dataset.appVersion = "42";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
