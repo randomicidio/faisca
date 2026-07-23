@@ -8,7 +8,7 @@ const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(d
 
 function originAllowed(request, env) {
   const origin = request.headers.get("Origin");
-  return !origin || origin === env.APP_ORIGIN;
+  return origin === env.APP_ORIGIN;
 }
 
 function cors(request, env) {

@@ -1919,8 +1919,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v61") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v61", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v62") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v62", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});

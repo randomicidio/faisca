@@ -19,7 +19,7 @@ window.FAISCA_CONFIG = {
   // Endereco do backend de sessao (Cloudflare Worker). Quando preenchido, a
   // versao web renova o acesso ao Drive sem pedir login novamente. O .exe e o
   // .dmg continuam usando a propria sessao local.
-  DRIVE_SESSION_API: "",
+  DRIVE_SESSION_API: "https://faisca-auth.dincreation.workers.dev",
 
   // Nome do arquivo que guarda seus dados no Drive de cada pessoa.
   // Não precisa mudar.
