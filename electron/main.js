@@ -6,6 +6,43 @@ const path = require("path");
 
 const APP_URL = "https://randomicidio.github.io/faisca/";
 
+// ============================================================
+//  Modo portátil
+//  Tudo que o app guarda (ideias, mídias, sessão do Google) fica
+//  numa pasta ao lado do .exe, e não espalhado pelo AppData do
+//  Windows. Assim dá pra levar a pasta inteira num pendrive.
+// ============================================================
+function tornarPortatil() {
+  if (!app.isPackaged) return;   // em desenvolvimento o .exe é o do Electron
+  const destino = path.join(path.dirname(app.getPath("exe")), "Dados do Faisca");
+  const antigo = app.getPath("userData");   // precisa ser lido antes de trocar
+  try {
+    fs.mkdirSync(destino, { recursive: true });
+    fs.accessSync(destino, fs.constants.W_OK);   // pasta só-leitura: melhor não mexer
+  } catch (e) {
+    return;                                       // segue no caminho padrão
+  }
+  migrarDados(antigo, destino);
+  app.setPath("userData", destino);
+  try { app.setPath("sessionData", destino); } catch (e) {}
+}
+
+// Na primeira vez em modo portátil, traz o que já existia no AppData
+// pra pessoa não abrir o app e achar que perdeu tudo.
+function migrarDados(antigo, destino) {
+  const marca = path.join(destino, ".migrado");
+  if (fs.existsSync(marca) || !fs.existsSync(antigo)) return;
+  // só o que importa: caches ficam pra trás, o app refaz sozinho
+  for (const item of ["Local Storage", "IndexedDB", "Local State", "google-drive-session.json"]) {
+    const de = path.join(antigo, item);
+    if (!fs.existsSync(de)) continue;
+    try { fs.cpSync(de, path.join(destino, item), { recursive: true }); } catch (e) {}
+  }
+  try { fs.writeFileSync(marca, new Date().toISOString()); } catch (e) {}
+}
+
+tornarPortatil();
+
 function loadLocalSecrets() {
   try {
     return JSON.parse(fs.readFileSync(path.join(__dirname, "secrets.local.json"), "utf8"));
