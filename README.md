@@ -79,7 +79,7 @@ Dentro do app:
 
 1. Abra o menu.
 2. Toque em **Sobre o Faísca**.
-3. Veja a versão do app e o pacote atual, por exemplo `v65`.
+3. Veja a versão do app e o pacote atual, por exemplo `v67`.
 
 Esse número ajuda a saber se o celular ou o navegador já recebeu a atualização mais nova.
 

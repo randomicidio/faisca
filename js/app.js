@@ -227,7 +227,7 @@
         <div class="row-btns"><button data-x="cancel">Fechar</button></div>
       </div>`;
     document.body.appendChild(host);
-    const fechar = () => host.remove();
+    const fechar = attachUiHistory(host);
     host.querySelector('[data-x="cancel"]').addEventListener("click", fechar);
     host.querySelector(".scrim").addEventListener("click", fechar);
   }
@@ -526,6 +526,28 @@
   // ============================================================
   let scrim, drawer;
   let drawerHistoryActive = false;
+  let uiLayers = [];
+  function attachUiHistory(host, onClose) {
+    const layer = { host, active: true, hasHistory: !!history.pushState, close: null };
+    layer.close = (fromHistory) => {
+      if (!layer.active) return;
+      const isHistory = fromHistory === true;
+      if (!isHistory && layer.hasHistory && history.back) { history.back(); return; }
+      layer.active = false;
+      uiLayers = uiLayers.filter((x) => x !== layer);
+      if (onClose) onClose();
+      host.remove();
+    };
+    uiLayers.push(layer);
+    if (layer.hasHistory) history.pushState({ faiscaLayer: true }, "", location.href);
+    return layer.close;
+  }
+  function closeTopUiLayer(fromHistory) {
+    const layer = uiLayers[uiLayers.length - 1];
+    if (!layer) return false;
+    layer.close(!!fromHistory);
+    return true;
+  }
   function ensureDrawer() {
     if (drawer) return;
     scrim = document.createElement("div"); scrim.className = "scrim";
@@ -563,6 +585,7 @@
     renderBoard();
   }
   window.addEventListener("popstate", (e) => {
+    if (closeTopUiLayer(true)) return;
     if (rec && rec.kind === "video") { closeVideoCamera(true); return; }
     if (openId) { closeDrawer(true); return; }
     const id = e.state && e.state.faiscaDrawer;
@@ -694,8 +717,9 @@
 
     g("#dwDelete").addEventListener("click", () => {
       confirmModal("Excluir esta ideia?", "Isso também remove as mídias dela deste aparelho e do seu Drive. Não tem como voltar atrás.", "Excluir", async () => {
-        await deleteIdeaFully(id);
-        closeDrawer(); toast("Ideia excluída");
+        const deleted = deleteIdeaFully(id);
+        closeDrawer();
+        if (deleted) toast("Ideia excluída");
       }, true);
     });
   }
@@ -771,14 +795,19 @@
     }
   }
 
-  async function deleteIdeaFully(id) {
+  function deleteIdeaFully(id) {
     const idea = S.getIdea(id);
-    if (idea) {
-      await M.delMany((idea.media || []).map((m) => m.id));
-      if (D.isConnected() && idea.driveFolderId) D.trash(idea.driveFolderId).catch(() => {});
-    }
+    if (!idea) return false;
+    const mediaIds = (idea.media || []).map((m) => m.id);
+    const driveFolderId = idea.driveFolderId;
     S.deleteIdea(id);
-    if (D.isConnected()) await Sync.full(false);
+    renderBoard();
+    if (D.isConnected()) {
+      Sync.pushNow();
+      if (driveFolderId) D.trash(driveFolderId).catch(() => {});
+    }
+    if (mediaIds.length) M.delMany(mediaIds).catch(() => {});
+    return true;
   }
 
   async function renderMediaList(id) {
@@ -1305,7 +1334,7 @@
         </div>
       </div>`;
     document.body.appendChild(host);
-    const close = () => host.remove();
+    const close = attachUiHistory(host);
     host.querySelector('[data-x="cancel"]').addEventListener("click", close);
     host.querySelector(".scrim").addEventListener("click", close);
     host.querySelector('[data-x="ok"]').addEventListener("click", () => { close(); onOk && onOk(); });
@@ -1369,10 +1398,15 @@
         <label class="conf-all"><input type="checkbox" id="confAll"> Fazer isso com todos os casos</label>
       </div>`;
     document.body.appendChild(host);
+    let resolved = false;
+    const closeConflict = attachUiHistory(host, () => {
+      if (!resolved) { resolved = true; done("newer", false); }
+    });
     host.addEventListener("click", (e) => {
       const b = e.target.closest("[data-c]"); if (!b) return;
       const all = host.querySelector("#confAll").checked;
-      host.remove();
+      resolved = true;
+      closeConflict();
       done(b.dataset.c, all);
     });
   }
@@ -1450,7 +1484,7 @@
         <div class="row-btns"><button data-x="cancel">Fechar</button></div>
       </div>`;
     document.body.appendChild(host);
-    const close = () => host.remove();
+    const close = attachUiHistory(host);
     host.querySelector('[data-x="cancel"]').addEventListener("click", close);
     host.querySelector(".scrim").addEventListener("click", close);
 
@@ -1465,22 +1499,22 @@
     if (quotaBox) renderQuota(quotaBox);
 
     const cb = host.querySelector("#cmConnect");
-    if (cb) cb.addEventListener("click", async () => { close(); await Sync.connect(); });
+    if (cb) cb.addEventListener("click", () => { close(); setTimeout(() => Sync.connect(), 80); });
     const sync = host.querySelector("#cmSync");
-    if (sync) sync.addEventListener("click", async () => { close(); active ? await Sync.full(true) : await Sync.connect(); });
+    if (sync) sync.addEventListener("click", () => { close(); setTimeout(() => active ? Sync.full(true) : Sync.connect(), 80); });
     const change = host.querySelector("#cmSwitch");
     if (change) change.addEventListener("click", () => {
       close();
-      confirmModal("Trocar a conta do Google?", "As ideias que estão neste aparelho serão sincronizadas com a nova conta escolhida.", "Trocar conta", async () => {
+      setTimeout(() => confirmModal("Trocar a conta do Google?", "As ideias que estão neste aparelho serão sincronizadas com a nova conta escolhida.", "Trocar conta", async () => {
         D.disconnect(); Sync.setStatus("off"); await Sync.connect({ selectAccount: true });
-      });
+      }), 80);
     });
     const disconnect = host.querySelector("#cmDisconnect");
     if (disconnect) disconnect.addEventListener("click", () => {
       close();
-      confirmModal("Desconectar do Google Drive?", "As ideias deste aparelho continuam aqui. Apenas a sincronização será desligada.", "Desconectar", () => {
+      setTimeout(() => confirmModal("Desconectar do Google Drive?", "As ideias deste aparelho continuam aqui. Apenas a sincronização será desligada.", "Desconectar", () => {
         D.disconnect(); Sync.setStatus("off"); toast("Drive desconectado");
-      }, true);
+      }, true), 80);
     });
   }
 
@@ -1489,7 +1523,7 @@
   function aboutModal() {
     const cfg = window.FAISCA_CONFIG || {};
     const appVersion = cfg.APP_VERSION || "1.0.1";
-    const buildVersion = cfg.BUILD_VERSION || "v65";
+    const buildVersion = cfg.BUILD_VERSION || "v67";
     const runtime = window.FaiscaDesktopOAuth ? "Aplicativo de computador" : "Web / celular";
     const syncState = D.isConnected() ? "Google Drive conectado" : "Somente neste aparelho";
     const sessionMode = window.FaiscaDesktopOAuth
@@ -1517,7 +1551,7 @@
         </div>
       </div>`;
     document.body.appendChild(host);
-    const close = () => host.remove();
+    const close = attachUiHistory(host);
     host.querySelector(".scrim").addEventListener("click", close);
     host.querySelector('[data-x="ok"]').addEventListener("click", close);
   }
@@ -1550,20 +1584,22 @@
     m.style.top = r.bottom + 8 + "px";
     m.style.right = Math.max(12, window.innerWidth - r.right) + "px";
     document.body.appendChild(m);
-    const closeM = () => { m.remove(); document.removeEventListener("click", closeM); };
+    const closeM = attachUiHistory(m, () => document.removeEventListener("click", closeM));
     setTimeout(() => document.addEventListener("click", closeM), 0);
     m.addEventListener("click", (ev) => {
       const b = ev.target.closest("button"); if (!b) return;
       closeM();
       const a = b.dataset.a;
-      if (a === "connect") connectModal();
-      else if (a === "syncnow") Sync.full(true);
-      else if (a === "disconnect") { D.disconnect(); Sync.setStatus("off"); toast("Drive desconectado"); }
-      else if (a === "export") doExport();
-      else if (a === "import") doImport();
-      else if (a === "install") instalarAgora();
-      else if (a === "clearposted") clearPosted();
-      else if (a === "about") aboutModal();
+      setTimeout(() => {
+        if (a === "connect") connectModal();
+        else if (a === "syncnow") Sync.full(true);
+        else if (a === "disconnect") { D.disconnect(); Sync.setStatus("off"); toast("Drive desconectado"); }
+        else if (a === "export") doExport();
+        else if (a === "import") doImport();
+        else if (a === "install") instalarAgora();
+        else if (a === "clearposted") clearPosted();
+        else if (a === "about") aboutModal();
+      }, 80);
     });
   });
 
@@ -1960,7 +1996,7 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        const buildVersion = (window.FAISCA_CONFIG && window.FAISCA_CONFIG.BUILD_VERSION) || "v65";
+        const buildVersion = (window.FAISCA_CONFIG && window.FAISCA_CONFIG.BUILD_VERSION) || "v67";
         const reloadKey = `faisca:reloaded:${buildVersion}`;
         if (sessionStorage.getItem(reloadKey) === "1") return;
         sessionStorage.setItem(reloadKey, "1");
