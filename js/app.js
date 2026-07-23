@@ -164,6 +164,10 @@
   let convite = null;
   const LS_DISPENSOU = "faisca:instalar:dispensado";
 
+  const ehIOS = () =>
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
   const jaEhApp = () =>
     matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 
@@ -180,7 +184,8 @@
   });
 
   function mostrarFaixaInstalar() {
-    if (!convite || jaEhApp()) return;
+    const manual = ehIOS() && !convite;
+    if ((!convite && !manual) || jaEhApp()) return;
     if (localStorage.getItem(LS_DISPENSOU) === "1") return;
     if ($("#instalarFaixa")) return;
     const f = document.createElement("div");
@@ -190,7 +195,7 @@
       <img src="./icons/icon-192.png" alt="">
       <div class="install-bar__txt">
         <b>Instale o Faísca no seu aparelho</b>
-        <small>Abre direto pelo ícone, em tela cheia, e funciona sem internet.</small>
+        <small>${manual ? "No iPhone, a instalação é pelo botão Compartilhar do Safari." : "Abre direto pelo ícone, em tela cheia, e funciona sem internet."}</small>
       </div>
       <button class="install-bar__no" data-i="nao">Agora não</button>
       <button class="install-bar__yes" data-i="sim">${I.down} Instalar</button>`;
@@ -203,6 +208,7 @@
     const alvo = $(".toolbar");
     alvo.parentNode.insertBefore(f, alvo);
   }
+  setTimeout(mostrarFaixaInstalar, 600);
 
   async function instalarAgora() {
     if (jaEhApp()) { toast("Você já está usando o app instalado"); return; }
@@ -221,8 +227,7 @@
   // Sem convite do navegador (iPhone, Firefox, ou já dispensado):
   // explicamos o caminho manual, que muda de navegador pra navegador.
   function comoInstalarModal() {
-    const ua = navigator.userAgent;
-    const iOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const iOS = ehIOS();
     const passos = iOS
       ? `<li>Toque no botão <b>Compartilhar</b> (o quadradinho com a seta pra cima), na barra do Safari.</li>
          <li>Role a lista e toque em <b>Adicionar à Tela de Início</b>.</li>
@@ -1539,7 +1544,7 @@
   function aboutModal() {
     const cfg = window.FAISCA_CONFIG || {};
     const appVersion = cfg.APP_VERSION || "1.0.1";
-    const buildVersion = cfg.BUILD_VERSION || "v71";
+    const buildVersion = cfg.BUILD_VERSION || "v72";
     const runtime = window.FaiscaDesktopOAuth ? "Aplicativo de computador" : "Web / celular";
     const syncState = D.isConnected() ? "Google Drive conectado" : "Somente neste aparelho";
     const sessionMode = window.FaiscaDesktopOAuth
@@ -2012,7 +2017,7 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        const buildVersion = (window.FAISCA_CONFIG && window.FAISCA_CONFIG.BUILD_VERSION) || "v71";
+        const buildVersion = (window.FAISCA_CONFIG && window.FAISCA_CONFIG.BUILD_VERSION) || "v72";
         const reloadKey = `faisca:reloaded:${buildVersion}`;
         if (sessionStorage.getItem(reloadKey) === "1") return;
         sessionStorage.setItem(reloadKey, "1");
