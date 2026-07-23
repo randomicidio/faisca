@@ -340,6 +340,7 @@
     el.draggable = true;
     el.dataset.id = idea.id;
     el.innerHTML = `
+      <span class="card__grip" title="Arraste para reordenar" draggable="true">${I.grip}</span>
       <div class="card__title">${esc(idea.title) || "<i style='color:var(--text-faint)'>Sem título</i>"}</div>
       ${preview ? `<div class="card__hook">${esc(preview)}</div>` : ""}
       ${tags}
@@ -355,6 +356,7 @@
     bindStageBar(el, idea);
 
     el.addEventListener("dragstart", (e) => {
+      if (!e.target.closest(".card__grip")) { e.preventDefault(); return; }
       dragId = idea.id; el.classList.add("dragging");
       if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
     });
@@ -436,7 +438,7 @@
     grid.addEventListener("pointerdown", (e) => {
       if (e.pointerType !== "touch" && e.pointerType !== "pen") return;
       const card = e.target.closest(".card");
-      if (!card || e.target.closest(".mini-prog")) return;
+      if (!card || !e.target.closest(".card__grip")) return;
       touchDrag = { card, id: card.dataset.id, startX: e.clientX, startY: e.clientY, active: false };
     });
     grid.addEventListener("pointermove", (e) => {
@@ -1917,8 +1919,8 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        if (sessionStorage.getItem("faisca:reloaded:v59") === "1") return;
-        sessionStorage.setItem("faisca:reloaded:v59", "1");
+        if (sessionStorage.getItem("faisca:reloaded:v60") === "1") return;
+        sessionStorage.setItem("faisca:reloaded:v60", "1");
         location.reload();
       });
       navigator.serviceWorker.register("./service-worker.js").then((reg) => reg.update()).catch(() => {});
@@ -1926,7 +1928,7 @@
         navigator.serviceWorker.controller.postMessage({ type: "CLEAR_FAISCA_CACHE" });
       }
     }
-    document.documentElement.dataset.appVersion = "59";
+    document.documentElement.dataset.appVersion = "60";
   }
 
   // migra mídias do modelo antigo (metadados só no IndexedDB) para dentro da ideia
