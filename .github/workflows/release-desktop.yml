@@ -58,6 +58,10 @@ jobs:
           $asm = [System.Reflection.Assembly]::LoadFile((Resolve-Path $dll))
           $resource = $asm.GetManifestResourceNames() | Where-Object { $_ -eq "faisca.segredos" }
           if (!$resource) { throw "client_secret nao foi embutido no app Windows." }
+          $stream = $asm.GetManifestResourceStream("faisca.segredos")
+          $reader = [System.IO.StreamReader]::new($stream)
+          $json = $reader.ReadToEnd() | ConvertFrom-Json
+          if (!$json.googleDesktopClientSecret) { throw "client_secret embutido no app Windows esta vazio." }
 
       - name: Publicar .exe na release
         shell: pwsh
