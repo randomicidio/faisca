@@ -139,11 +139,16 @@
     const title = inp.value.trim();
     if (!title) { inp.focus(); return; }
     S.addIdea({ title });
-    inp.value = ""; inp.focus();
+    inp.value = "";
+    inp.blur();
     toast("Ideia capturada ✨");
   }
   $("#addBtn").addEventListener("click", doAdd);
-  $("#capture").addEventListener("keydown", (e) => { if (e.key === "Enter") doAdd(); });
+  $("#capture").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    doAdd();
+  });
   $("#sparkNew").addEventListener("click", () => { currentSpark = S.randomSpark(); $("#sparkText").textContent = currentSpark; });
   $("#sparkText").addEventListener("click", () => { $("#capture").value = currentSpark; $("#capture").focus(); });
 
@@ -1523,7 +1528,7 @@
   function aboutModal() {
     const cfg = window.FAISCA_CONFIG || {};
     const appVersion = cfg.APP_VERSION || "1.0.1";
-    const buildVersion = cfg.BUILD_VERSION || "v67";
+    const buildVersion = cfg.BUILD_VERSION || "v68";
     const runtime = window.FaiscaDesktopOAuth ? "Aplicativo de computador" : "Web / celular";
     const syncState = D.isConnected() ? "Google Drive conectado" : "Somente neste aparelho";
     const sessionMode = window.FaiscaDesktopOAuth
@@ -1996,7 +2001,7 @@
       });
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (!event.data || event.data.type !== "FAISCA_CACHE_CLEARED") return;
-        const buildVersion = (window.FAISCA_CONFIG && window.FAISCA_CONFIG.BUILD_VERSION) || "v67";
+        const buildVersion = (window.FAISCA_CONFIG && window.FAISCA_CONFIG.BUILD_VERSION) || "v68";
         const reloadKey = `faisca:reloaded:${buildVersion}`;
         if (sessionStorage.getItem(reloadKey) === "1") return;
         sessionStorage.setItem(reloadKey, "1");
