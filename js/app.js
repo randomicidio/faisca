@@ -936,6 +936,38 @@
   }
 
   // ---- gravação (MediaRecorder) ----
+  // Áudio cru: sem cancelamento de eco / supressão de ruído / ganho automático.
+  // Esses filtros do navegador são feitos pra chamada de voz e deixam a gravação
+  // abafada, "bombando" e com cortes. Pra conteúdo a gente quer o som natural.
+  function audioConstraints() {
+    const c = {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+      channelCount: { ideal: 1 },
+      sampleRate: { ideal: 48000 },
+      // prefixos legados: alguns Chromium ainda ligam esses por conta própria
+      googEchoCancellation: false,
+      googNoiseSuppression: false,
+      googAutoGainControl: false,
+      googHighpassFilter: false,
+      googTypingNoiseDetection: false,
+    };
+    if (preferredAudioDevice) c.deviceId = { exact: preferredAudioDevice };
+    return c;
+  }
+
+  const REC_AUDIO_BPS = 128000;
+  const REC_VIDEO_BPS = 4000000;
+
+  function makeMediaRecorder(stream, kind) {
+    const opts = kind === "video"
+      ? { audioBitsPerSecond: REC_AUDIO_BPS, videoBitsPerSecond: REC_VIDEO_BPS }
+      : { audioBitsPerSecond: REC_AUDIO_BPS };
+    try { return new MediaRecorder(stream, opts); }
+    catch (e) { return new MediaRecorder(stream); }
+  }
+
   function pickMediaFromGallery(ideaId) {
     const inp = document.createElement("input");
     inp.type = "file";
@@ -992,7 +1024,7 @@
       video: preferredVideoDevice
         ? { deviceId: { exact: preferredVideoDevice }, width: { ideal: 1280 }, height: { ideal: 720 } }
         : (desktop ? { width: { ideal: 1280 }, height: { ideal: 720 } } : { facingMode: { ideal: vcFacing }, width: { ideal: 960 }, height: { ideal: 540 } }),
-      audio: preferredAudioDevice ? { deviceId: { exact: preferredAudioDevice } } : true,
+      audio: audioConstraints(),
     });
     const getStream = async () => navigator.mediaDevices.getUserMedia(constraints());
     let stream;
@@ -1028,7 +1060,7 @@
       const target = buildVideoRecordStream(preview, rec.stream);
       rec.recordStream = target.stream;
       rec.recordCleanup = target.cleanup;
-      return new MediaRecorder(target.stream);
+      return makeMediaRecorder(target.stream, "video");
     };
     let mr;
     try { mr = makeRecorder(); }
@@ -1276,14 +1308,14 @@
     if (!navigator.mediaDevices || !window.MediaRecorder) { toast("Seu navegador não permite gravar aqui", true); return; }
     let stream;
     try {
-      const audio = preferredAudioDevice ? { deviceId: { exact: preferredAudioDevice } } : true;
+      const audio = audioConstraints();
       stream = await navigator.mediaDevices.getUserMedia(kind === "video" ? { video: { facingMode: "user" }, audio } : { audio });
     } catch (e) {
       toast(kind === "video" ? "Preciso de acesso à câmera e ao microfone" : "Preciso de acesso ao microfone", true);
       return;
     }
     let mr;
-    try { mr = new MediaRecorder(stream); }
+    try { mr = makeMediaRecorder(stream, kind); }
     catch (e) { stream.getTracks().forEach((t) => t.stop()); toast("Não consegui iniciar a gravação", true); return; }
     const chunks = [];
     mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
