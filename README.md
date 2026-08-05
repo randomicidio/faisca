@@ -125,6 +125,10 @@ js/app.js               interface e comportamento principal
 js/drive.js             login e sincronização com Google Drive
 js/store.js             dados locais
 js/media.js             mídias locais
+js/mp3.js               áudio em MP3 (grava e converte)
+js/worker-mp3.js        codificador de MP3 (fora da tela principal)
+js/worklet-pcm.js       captura o som cru do microfone
+js/vendor/              LAME (lamejs), o motor de MP3
 service-worker.js       cache offline
 desktop-win/            versão Windows
 electron/               versão Mac
@@ -176,3 +180,8 @@ O workflow fica em:
 ## Licença
 
 Projeto pessoal do Faísca.
+
+A conversão para MP3 usa o **LAME** (via [lamejs](https://github.com/shijinyu/lamejs)),
+distribuído sob LGPL — site do projeto: [lame.sourceforge.net](https://lame.sourceforge.net).
+A biblioteca fica separada e sem alterações em `js/vendor/lamejs.iife.js`
+(licença em `js/vendor/LAMEJS-LICENSE.txt`).

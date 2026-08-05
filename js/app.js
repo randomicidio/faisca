@@ -853,7 +853,7 @@
             ? `<video controls preload="metadata" draggable="false" src="${url}"></video>`
             : c.kind === "image"
             ? `<img class="media-img" draggable="false" src="${url}" alt="${esc(c.name || defName)}">`
-            : `<audio controls preload="metadata" draggable="false" src="${url}"></audio>`)
+            : `<audio controls controlsList="nodownload" preload="metadata" draggable="false" src="${url}"></audio>`)
         : (downloading
             ? `<div class="media-loading">Baixando do Drive...</div>`
             : `<div class="media-loading">Indisponível neste aparelho</div>`);
@@ -866,6 +866,7 @@
           <span class="media-kind">${kindIcon}</span>
           <input class="media-name" draggable="false" value="${esc(c.name || defName)}" placeholder="Dê um nome a esta mídia...">
           <span class="media-size">${fmtSize(c.size || 0)}</span>
+          <button class="media-dl" title="${c.kind === "audio" ? "Baixar em MP3" : "Baixar"}">${I.down}</button>
           <button class="media-del" title="Remover">${I.trash}</button>
         </div>
         <div class="media-player">${playerHTML}</div>`;
@@ -881,6 +882,9 @@
         saveMediaName(e.target);
         e.target.blur();
       });
+      row.querySelector(".media-dl").addEventListener("click", (e) =>
+        baixarMidia(c, defName, e.currentTarget)
+      );
       row.querySelector(".media-del").addEventListener("click", async () => {
         const it = S.getIdea(id); if (!it) return;
         const m = it.media.find((x) => x.id === c.id);
@@ -910,6 +914,113 @@
         }).catch(() => {});
       }
     }
+  }
+
+  // ---- baixar uma mídia ----
+  // Áudio SEMPRE sai em MP3. Gravação nova já nasce MP3; as antigas (WebM/M4A)
+  // e os arquivos enviados são convertidos aqui, na hora de baixar.
+  async function baixarMidia(c, defName, btn) {
+    if (btn.disabled) return;
+    const icone = btn.innerHTML;
+    const soltar = () => { btn.disabled = false; btn.innerHTML = icone; };
+
+    // Dá pra saber o formato final antes de abrir o arquivo: áudio vira MP3,
+    // o resto sai como está. Assim a janela "Salvar como" já sugere o certo.
+    const vaiVirarMp3 = c.kind === "audio" && window.Mp3 && Mp3.suportado() && !Mp3.ehMp3(c.mime || "");
+    const nome = nomeArquivo(
+      c.name || defName,
+      vaiVirarMp3 ? ".mp3" : extFor(c.mime || (c.kind === "audio" ? "audio/mpeg" : ""))
+    );
+
+    // Pergunta ONDE salvar ainda no clique. O navegador só deixa abrir essa
+    // janela logo depois do toque — se esperar a conversão, ele já barrou.
+    const destino = await escolherDestino(nome);
+    if (destino === "cancelou") return;
+
+    btn.disabled = true;
+    try {
+      let blob = await M.get(c.id);
+      if (!blob && c.driveFileId && D.isConnected()) {
+        blob = await D.getMediaBlob(c.driveFileId).catch(() => null);
+        if (blob) M.put(c.id, blob, { ideaId: openId, kind: c.kind, name: c.name });
+      }
+      if (!blob) { toast("Essa mídia não está aqui nem no Drive", true); return; }
+
+      let mime = blob.type || c.mime || "";
+      if (c.kind === "audio" && window.Mp3 && Mp3.suportado() && !Mp3.ehMp3(mime)) {
+        btn.classList.add("is-busy");
+        btn.innerHTML = "0%";
+        const mp3 = await Mp3.converter(blob, (p) => { btn.innerHTML = Math.round(p * 100) + "%"; });
+        btn.classList.remove("is-busy");
+        if (mp3) { blob = mp3; mime = "audio/mpeg"; }
+        else {
+          // O arquivo escolhido tem nome de MP3 e o conteúdo não é — em vez de
+          // salvar uma coisa com cara de outra, vai pros downloads no formato certo.
+          toast("Não consegui converter pra MP3 — baixando no formato original", true);
+          baixarNaPastaPadrao(blob, nomeArquivo(c.name || defName, extFor(mime)));
+          return;
+        }
+      }
+      await entregarArquivo(destino, blob, nome);
+    } finally { soltar(); }
+  }
+
+  // Onde salvar: no PC abre a janela do sistema (pasta + nome, como qualquer
+  // programa). No celular essa janela não existe — aí segue pros downloads.
+  // Devolve o arquivo escolhido, null (não tem janela) ou "cancelou".
+  async function escolherDestino(nome) {
+    if (!window.showSaveFilePicker) return null;
+    const ext = (nome.match(/\.[a-z0-9]+$/i) || [""])[0].toLowerCase();
+    const tipoMime = MIME_POR_EXT[ext];
+    try {
+      return await window.showSaveFilePicker({
+        suggestedName: nome,
+        id: "faisca-midia",          // o navegador lembra a última pasta usada
+        startIn: "downloads",
+        types: tipoMime ? [{ description: "Arquivo " + ext.slice(1).toUpperCase(), accept: { [tipoMime]: [ext] } }] : [],
+      });
+    } catch (e) {
+      if (e && e.name === "AbortError") return "cancelou";
+      return null;   // janela indisponível (app embutido, permissão negada): jeito antigo
+    }
+  }
+
+  const MIME_POR_EXT = {
+    ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".wav": "audio/wav", ".ogg": "audio/ogg",
+    ".webm": "video/webm", ".mp4": "video/mp4",
+    ".png": "image/png", ".jpg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp",
+  };
+
+  async function entregarArquivo(destino, blob, nome) {
+    if (destino && destino.createWritable) {
+      try {
+        const escrita = await destino.createWritable();
+        await escrita.write(blob);
+        await escrita.close();
+        toast("Salvo em " + (destino.name || nome) + " ✨");
+        return;
+      } catch (e) {
+        toast("Não consegui salvar aí — mandei pros downloads", true);
+      }
+    }
+    baixarNaPastaPadrao(blob, nome);
+  }
+
+  // "Áudio 30 jul, 14:20" + ".mp3"; se o nome já tiver extensão, troca (não empilha)
+  function nomeArquivo(nome, ext) {
+    let base = String(nome || "midia").trim().replace(/[\\/:*?"<>|]+/g, "-");
+    base = base.replace(/\.(mp3|mp4|m4a|mpga|wav|ogg|oga|opus|webm|weba|aac|flac|mov|mkv|avi|png|jpe?g|gif|webp|heic|dat)$/i, "");
+    return (base || "midia") + ext;
+  }
+
+  function baixarNaPastaPadrao(blob, nome) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = nome;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
 
   function bindMediaReorder(host, id) {
@@ -1317,15 +1428,26 @@
     let mr;
     try { mr = makeMediaRecorder(stream, kind); }
     catch (e) { stream.getTracks().forEach((t) => t.stop()); toast("Não consegui iniciar a gravação", true); return; }
+    // Áudio vai pra MP3 em tempo real (toca em qualquer lugar). O MediaRecorder
+    // continua rodando como rede de proteção: se o MP3 falhar, a gravação não se perde.
+    let mp3rec = null;
+    if (kind === "audio" && window.Mp3 && Mp3.suportado()) {
+      try { mp3rec = await Mp3.gravadorAoVivo(stream); } catch (e) { mp3rec = null; }
+    }
     const chunks = [];
     mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
     mr.onstop = async () => {
       stream.getTracks().forEach((t) => t.stop());
-      const blob = new Blob(chunks, { type: mr.mimeType || (kind === "video" ? "video/webm" : "audio/webm") });
+      let blob = new Blob(chunks, { type: mr.mimeType || (kind === "video" ? "video/webm" : "audio/webm") });
       const canceled = rec && rec.canceled;
       rec = null; clearInterval(recTimer); recTimer = null;
       renderRecPanel();
-      if (canceled || !blob.size) return;
+      if (canceled) { if (mp3rec) mp3rec.cancelar(); return; }
+      if (mp3rec) {
+        const m = await mp3rec.parar();
+        if (m && m.size) blob = m;
+      }
+      if (!blob.size) return;
       const stamp = new Date().toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
       try {
         await addMediaToIdea(ideaId, { kind, mime: blob.type, name: (kind === "video" ? "Vídeo " : "Áudio ") + stamp, blob });
