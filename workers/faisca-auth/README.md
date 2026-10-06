@@ -47,6 +47,7 @@ npx wrangler secret put TOKEN_ENCRYPTION_KEY
 8. No `js/config.js`, preencha `DRIVE_SESSION_API` com a URL do Worker, sem barra
    no final. Publique o site no GitHub Pages normalmente.
 
-O Worker aceita chamadas apenas do endereco publico do Faisca. Ele nao recebe
+O Worker aceita chamadas apenas dos enderecos do Faisca listados em `APP_URLS`,
+no `wrangler.jsonc` (o primeiro e o principal). Ele nao recebe
 nem armazena ideias, midias ou senha do Google: somente a credencial cifrada que
 serve para renovar o acesso de cada pessoa ao proprio Drive.

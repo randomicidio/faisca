@@ -6,14 +6,21 @@ const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(d
   headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...headers },
 });
 
+// Enderecos em que o Faisca mora. APP_URLS traz todos, separados por virgula;
+// o primeiro e o principal. Sem ela, vale o par antigo APP_ORIGIN + APP_PATH.
+function appUrls(env) {
+  const lista = String(env.APP_URLS || "").split(",").map((u) => u.trim()).filter(Boolean);
+  return lista.length ? lista : [env.APP_ORIGIN + env.APP_PATH];
+}
+
 function originAllowed(request, env) {
   const origin = request.headers.get("Origin");
-  return origin === env.APP_ORIGIN;
+  return !!origin && appUrls(env).some((u) => new URL(u).origin === origin);
 }
 
 function cors(request, env) {
   return originAllowed(request, env)
-    ? { "Access-Control-Allow-Origin": env.APP_ORIGIN, "Access-Control-Allow-Headers": "Authorization, Content-Type", "Access-Control-Allow-Methods": "POST, DELETE, OPTIONS", Vary: "Origin" }
+    ? { "Access-Control-Allow-Origin": request.headers.get("Origin"), "Access-Control-Allow-Headers": "Authorization, Content-Type", "Access-Control-Allow-Methods": "POST, DELETE, OPTIONS", Vary: "Origin" }
     : {};
 }
 
@@ -46,19 +53,22 @@ async function decrypt(value, env) {
 }
 
 function appReturn(env) {
-  return env.APP_ORIGIN + env.APP_PATH;
+  return appUrls(env)[0];
 }
 
 function validReturnTo(value, env) {
   if (!value) return false;
   try {
     const url = new URL(value);
-    const allowedBase = new URL(appReturn(env));
-    const allowedPaths = new Set([
-      allowedBase.pathname,
-      allowedBase.pathname.replace(/\/$/, "/index.html"),
-    ]);
-    return url.origin === allowedBase.origin && allowedPaths.has(url.pathname) && !url.search;
+    if (url.search) return false;
+    return appUrls(env).some((base) => {
+      const allowedBase = new URL(base);
+      const allowedPaths = new Set([
+        allowedBase.pathname,
+        allowedBase.pathname.replace(/\/$/, "/index.html"),
+      ]);
+      return url.origin === allowedBase.origin && allowedPaths.has(url.pathname);
+    });
   } catch {
     return false;
   }
