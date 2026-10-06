@@ -18,8 +18,9 @@ namespace Faisca;
 
 static class Program
 {
-    // O Faísca mora no site do DinTools, só para quem tem o kit: na primeira
-    // abertura a pessoa entra com o e-mail da compra, aqui dentro mesmo.
+    // O Faísca mora no site do DinTools, só para quem tem o kit. Este programa
+    // é baixado pelo Meu kit, então não pede login de novo: ele se apresenta
+    // ao site com a chave que vai embutida (ver Chave, no fim do arquivo).
     public const string AppUrl = "https://dintools.com.br/faisca/";
 
     [STAThread]
@@ -108,6 +109,18 @@ public class JanelaPrincipal : Form
             e.Handled = true;
             AbrirNoNavegador(e.Uri);
         };
+
+        // A prova vai num cookie, e não num cabeçalho, para valer também nos
+        // pedidos que o próprio Faísca faz por baixo (os do modo sem internet).
+        var prova = Chave.Prova();
+        if (prova is not null)
+        {
+            var cookie = core.CookieManager.CreateCookie("dt_app", prova, "dintools.com.br", "/");
+            cookie.IsSecure = true;
+            cookie.IsHttpOnly = true;
+            cookie.Expires = DateTime.Now.AddYears(5);
+            core.CookieManager.AddOrUpdateCookie(cookie);
+        }
 
         core.Navigate(Program.AppUrl);
     }
@@ -463,5 +476,27 @@ public static class Segredos
     {
         var v = JsonNode.Parse(texto)?["googleDesktopClientSecret"]?.GetValue<string>();
         return string.IsNullOrEmpty(v) ? null : v;
+    }
+}
+
+// A chave com que o programa se apresenta ao site. Fica em
+// desktop-win/chave_app.txt, fora do git, e viaja dentro do .exe; a mesma
+// chave está no servidor do DinTools. O que vai ao site não é a chave, e sim
+// uma assinatura feita com ela.
+static class Chave
+{
+    public static string Prova()
+    {
+        try
+        {
+            using var s = typeof(Chave).Assembly.GetManifestResourceStream("faisca.chave");
+            if (s is null) return null;
+            using var r = new StreamReader(s);
+            var chave = r.ReadToEnd().Trim();
+            if (chave.Length < 32) return null;
+            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(chave));
+            return Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes("faisca|app|desktop"))).ToLowerInvariant();
+        }
+        catch { return null; }
     }
 }

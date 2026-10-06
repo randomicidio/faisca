@@ -49,7 +49,7 @@ O aplicativo só abre a página; o Faísca em si é atualizado no site do DinToo
 Depois do `npm run build:win`, o instalador é montado com o Inno Setup 6:
 
 ```powershell
-& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" /DAppVersion=1.1.0 desktop-win\instalador.iss
+& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" /DAppVersion=1.1.1 desktop-win\instalador.iss
 ```
 
 Sai em `dist-webview2/Faisca-Setup-<versão>.exe`. É ele que vai para o Meu kit.

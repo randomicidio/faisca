@@ -8,3 +8,6 @@ npm-debug.log*
 desktop-win/bin/
 desktop-win/obj/
 dist-webview2/
+
+# Chave com que o programa de Windows se apresenta ao site do DinTools
+desktop-win/chave_app.txt

@@ -9,7 +9,7 @@
     <AssemblyName>Faisca</AssemblyName>
     <RootNamespace>Faisca</RootNamespace>
     <ApplicationIcon>..\icons\faisca.ico</ApplicationIcon>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Product>Faísca</Product>
     <AssemblyTitle>Faísca</AssemblyTitle>
     <Company>Din Content</Company>
@@ -39,7 +39,14 @@
     <EmbeddedResource Include="..\electron\secrets.local.json"
                       LogicalName="faisca.segredos"
                       Condition="Exists('..\electron\secrets.local.json')" />
+    <EmbeddedResource Include="chave_app.txt" LogicalName="faisca.chave"
+                      Condition="Exists('chave_app.txt')" />
   </ItemGroup>
+
+  <Target Name="AvisarChaveAusente" BeforeTargets="BeforeBuild"
+          Condition="!Exists('chave_app.txt')">
+    <Warning Text="desktop-win/chave_app.txt nao encontrada: o programa vai pedir o login do kit ao abrir." />
+  </Target>
 
   <Target Name="AvisarSegredoAusente" BeforeTargets="BeforeBuild"
           Condition="!Exists('..\electron\secrets.local.json')">
