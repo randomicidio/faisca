@@ -38,7 +38,18 @@ desktop-win/
 Ele carrega a versão publicada em:
 
 ```text
-https://randomicidio.github.io/faisca/
+https://dintools.com.br/faisca/
 ```
 
-Então, antes de empacotar para PC, publique a versão web atual no GitHub Pages.
+O aplicativo só abre a página; o Faísca em si é atualizado no site do DinTools
+(`scripts/sync-faisca.sh`, no projeto do site), sem precisar empacotar de novo.
+
+## Instalador
+
+Depois do `npm run build:win`, o instalador é montado com o Inno Setup 6:
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" /DAppVersion=1.1.0 desktop-win\instalador.iss
+```
+
+Sai em `dist-webview2/Faisca-Setup-<versão>.exe`. É ele que vai para o Meu kit.

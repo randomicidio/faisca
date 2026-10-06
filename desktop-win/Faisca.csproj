@@ -9,7 +9,7 @@
     <AssemblyName>Faisca</AssemblyName>
     <RootNamespace>Faisca</RootNamespace>
     <ApplicationIcon>..\icons\faisca.ico</ApplicationIcon>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Product>Faísca</Product>
     <AssemblyTitle>Faísca</AssemblyTitle>
     <Company>Din Content</Company>

@@ -18,7 +18,9 @@ namespace Faisca;
 
 static class Program
 {
-    public const string AppUrl = "https://randomicidio.github.io/faisca/";
+    // O Faísca mora no site do DinTools, só para quem tem o kit: na primeira
+    // abertura a pessoa entra com o e-mail da compra, aqui dentro mesmo.
+    public const string AppUrl = "https://dintools.com.br/faisca/";
 
     [STAThread]
     static void Main()
