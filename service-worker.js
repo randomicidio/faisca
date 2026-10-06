@@ -1,19 +1,19 @@
 // Faísca — service worker (funciona offline)
-const CACHE = "faisca-v75";
+const CACHE = "faisca-v76";
 const ASSETS = [
   "./",
   "./index.html",
-  "./css/styles.css?v=75",
-  "./js/config.js?v=75",
-  "./js/store.js?v=75",
-  "./js/media.js?v=75",
-  "./js/mp3.js?v=75",
-  "./js/drive.js?v=75",
+  "./css/styles.css?v=76",
+  "./js/config.js?v=76",
+  "./js/store.js?v=76",
+  "./js/media.js?v=76",
+  "./js/mp3.js?v=76",
+  "./js/drive.js?v=76",
   // codificador de MP3 (buscado na hora de gravar/converter — precisa estar offline também)
   "./js/worker-mp3.js",
   "./js/worklet-pcm.js",
   "./js/vendor/lamejs.iife.js",
-  "./js/app.js?v=75",
+  "./js/app.js?v=76",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

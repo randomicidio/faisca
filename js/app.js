@@ -210,6 +210,37 @@
   }
   setTimeout(mostrarFaixaInstalar, 600);
 
+  // ---------- mudança de endereço ----------
+  // O Faísca passou a morar em dintools.com.br/faisca, como parte do kit do
+  // DinTools. Quem ainda abre o endereço antigo vê este aviso; os dados ficam
+  // presos a cada endereço, então o aviso diz como levá-los.
+  const ENDERECO_NOVO = "https://dintools.com.br/faisca/";
+  const LS_VIU_MUDANCA = "faisca:mudanca:dispensado";
+
+  function mostrarAvisoDeMudanca() {
+    if (location.hostname !== "randomicidio.github.io") return;
+    if (localStorage.getItem(LS_VIU_MUDANCA) === "1" || $("#mudancaFaixa")) return;
+    const f = document.createElement("div");
+    f.className = "install-bar";
+    f.id = "mudancaFaixa";
+    f.innerHTML = `
+      <img src="./icons/icon-192.png" alt="">
+      <div class="install-bar__txt">
+        <b>O Faísca mudou de endereço</b>
+        <small>Agora ele faz parte do kit do DinTools, em dintools.com.br/faisca. Para levar suas ideias, entre com o Google lá; sem sincronização, faça um backup aqui (menu Mais) e restaure lá. Este endereço continua funcionando por enquanto.</small>
+      </div>
+      <button class="install-bar__no" data-m="nao">Agora não</button>
+      <button class="install-bar__yes" data-m="sim">Abrir o novo</button>`;
+    f.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-m]"); if (!b) return;
+      if (b.dataset.m === "nao") { localStorage.setItem(LS_VIU_MUDANCA, "1"); f.remove(); return; }
+      location.href = ENDERECO_NOVO;
+    });
+    const alvo = $(".toolbar");
+    alvo.parentNode.insertBefore(f, alvo);
+  }
+  setTimeout(mostrarAvisoDeMudanca, 700);
+
   async function instalarAgora() {
     if (jaEhApp()) { toast("Você já está usando o app instalado"); return; }
     if (convite) {
