@@ -183,11 +183,14 @@
     toast("Instalado! Agora é só abrir pelo ícone ✨");
   });
 
+  // O Faísca é para ser usado instalado. No navegador, a faixa fica sempre à
+  // vista e não dá para dispensar: some só quando ele abre como aplicativo
+  // (e não aparece no programa de Windows ou de Mac, que já é o aplicativo).
   function mostrarFaixaInstalar() {
-    const manual = ehIOS() && !convite;
-    if ((!convite && !manual) || jaEhApp()) return;
-    if (localStorage.getItem(LS_DISPENSOU) === "1") return;
-    if ($("#instalarFaixa")) return;
+    if (jaEhApp() || window.FaiscaDesktopOAuth) return;
+    const manual = !convite;
+    const antiga = $("#instalarFaixa");
+    if (antiga) antiga.remove();
     const f = document.createElement("div");
     f.className = "install-bar";
     f.id = "instalarFaixa";
@@ -195,15 +198,15 @@
       <img src="./icons/icon-192.png" alt="">
       <div class="install-bar__txt">
         <b>Instale o Faísca no seu aparelho</b>
-        <small>${manual ? "No iPhone, a instalação é pelo botão Compartilhar do Safari." : "Abre direto pelo ícone, em tela cheia, e funciona sem internet."}</small>
+        <small>${!manual ? "Abre direto pelo ícone, em tela cheia, e funciona sem internet."
+          : ehIOS() ? "No iPhone, a instalação é pelo botão Compartilhar do Safari."
+          : "A instalação é pelo menu do navegador. Toque em Instalar para ver como."}</small>
       </div>
-      <button class="install-bar__no" data-i="nao">Agora não</button>
       <button class="install-bar__yes" data-i="sim">${I.down} Instalar</button>`;
     f.addEventListener("click", async (e) => {
       const b = e.target.closest("[data-i]"); if (!b) return;
-      if (b.dataset.i === "nao") { localStorage.setItem(LS_DISPENSOU, "1"); f.remove(); return; }
-      f.remove();
       await instalarAgora();
+      mostrarFaixaInstalar();
     });
     const alvo = $(".toolbar");
     alvo.parentNode.insertBefore(f, alvo);
