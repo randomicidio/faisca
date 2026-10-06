@@ -271,8 +271,8 @@
          <li>Role a lista e toque em <b>Adicionar à Tela de Início</b>.</li>
          <li>Confirme em <b>Adicionar</b> e abra o Faísca pelo ícone.</li>`
       : `<li>Abra o menu do navegador (os <b>três pontinhos</b>, no canto).</li>
-         <li>Escolha <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.</li>
-         <li>Confirme em <b>Instalar</b> e abra o Faísca pelo ícone.</li>`;
+         <li>Toque em <b>Instalar e criar atalho</b>. Em alguns aparelhos o nome é <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.</li>
+         <li>Toque em <b>Instalar</b> e abra o Faísca pelo ícone.</li>`;
     t.innerHTML = instalado
       ? `<div class="install-wall__card">
            <img src="./icons/icon-192.png" alt="">
@@ -283,16 +283,26 @@
            <img src="./icons/icon-192.png" alt="">
            <h1>Instale o Faísca</h1>
            <p>O Faísca funciona como aplicativo: abre pelo ícone, em tela cheia, e continua funcionando sem internet.</p>
-           ${convite ? `<button class="install-wall__go" data-w="sim">${I.down} Instalar agora</button>` : ""}
+           <button class="install-wall__go" data-w="sim">${I.down} Instalar agora</button>
            <div class="install-wall__steps">
              <b>${convite ? "Se o botão não funcionar:" : "Como instalar:"}</b>
              <ol>${passos}</ol>
+           </div>
+           <div class="install-wall__seta ${iOS ? "install-wall__seta--baixo" : ""}" hidden>
+             ${iOS ? "Toque em <b>Compartilhar</b>, aqui embaixo, e depois em <b>Adicionar à Tela de Início</b>"
+                   : "Toque nos <b>três pontinhos</b>, aqui em cima, e depois em <b>Instalar e criar atalho</b>"}
            </div>
            <small>${iOS ? "No iPhone, a instalação só funciona pelo Safari."
              : "Se o seu navegador não tiver essa opção, use o Chrome ou o Edge. No Windows, há também a versão para instalar, no Meu kit."}</small>
          </div>`;
     const go = t.querySelector('[data-w="sim"]');
-    if (go) go.addEventListener("click", async () => { await instalarSemModal(); mostrarTelaDeInstalar(false); });
+    if (go) go.addEventListener("click", async () => {
+      // Só o navegador pode abrir a janela de instalar, e só quando ele mesmo
+      // oferece. Sem essa oferta, o botão mostra onde fica o caminho no menu.
+      if (!convite) { const s = t.querySelector(".install-wall__seta"); if (s) s.hidden = false; return; }
+      await instalarSemModal();
+      mostrarTelaDeInstalar(false);
+    });
   }
 
   // O mesmo convite do navegador, sem a janela de instruções: na tela de
@@ -332,7 +342,7 @@
          <li>Role a lista e toque em <b>Adicionar à Tela de Início</b>.</li>
          <li>Confirme em <b>Adicionar</b>.</li>`
       : `<li>Toque no menu do navegador (os <b>três pontinhos</b>, no canto).</li>
-         <li>Escolha <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.</li>
+         <li>Toque em <b>Instalar e criar atalho</b>. Em alguns aparelhos o nome é <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.</li>
          <li>Confirme em <b>Instalar</b>.</li>`;
     const host = document.createElement("div");
     host.className = "modal-center";
