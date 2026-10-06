@@ -244,6 +244,71 @@
   }
   setTimeout(mostrarAvisoDeMudanca, 700);
 
+  // ---------- só instalado ----------
+  // No endereço do kit, o Faísca aberto pelo navegador mostra apenas a tela de
+  // instalação: a ideia é usar o aplicativo, no celular e no computador. Vale
+  // só lá. No endereço antigo há gente com ideias guardadas no navegador, e
+  // no iPhone o aplicativo instalado não enxerga o que ficou no Safari.
+  function soInstalado() {
+    // A segunda condição é só para testar a tela fora do endereço do kit.
+    const noKit = location.hostname === "dintools.com.br" || localStorage.getItem("faisca:so-instalado:teste") === "1";
+    return noKit && !jaEhApp() && !window.FaiscaDesktopOAuth;
+  }
+
+  function mostrarTelaDeInstalar(instalado) {
+    if (!soInstalado()) return;
+    let t = $("#instalarTela");
+    if (!t) {
+      t = document.createElement("div");
+      t.id = "instalarTela";
+      t.className = "install-wall";
+      document.body.appendChild(t);
+      document.documentElement.classList.add("so-instalar");
+    }
+    const iOS = ehIOS();
+    const passos = iOS
+      ? `<li>Toque no botão <b>Compartilhar</b> (o quadradinho com a seta pra cima), na barra do Safari.</li>
+         <li>Role a lista e toque em <b>Adicionar à Tela de Início</b>.</li>
+         <li>Confirme em <b>Adicionar</b> e abra o Faísca pelo ícone.</li>`
+      : `<li>Abra o menu do navegador (os <b>três pontinhos</b>, no canto).</li>
+         <li>Escolha <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.</li>
+         <li>Confirme em <b>Instalar</b> e abra o Faísca pelo ícone.</li>`;
+    t.innerHTML = instalado
+      ? `<div class="install-wall__card">
+           <img src="./icons/icon-192.png" alt="">
+           <h1>Faísca instalado ✨</h1>
+           <p>Agora é só abrir pelo ícone, na tela inicial do aparelho. Pode fechar esta aba.</p>
+         </div>`
+      : `<div class="install-wall__card">
+           <img src="./icons/icon-192.png" alt="">
+           <h1>Instale o Faísca</h1>
+           <p>O Faísca funciona como aplicativo: abre pelo ícone, em tela cheia, e continua funcionando sem internet.</p>
+           ${convite ? `<button class="install-wall__go" data-w="sim">${I.down} Instalar agora</button>` : ""}
+           <div class="install-wall__steps">
+             <b>${convite ? "Se o botão não funcionar:" : "Como instalar:"}</b>
+             <ol>${passos}</ol>
+           </div>
+           <small>${iOS ? "No iPhone, a instalação só funciona pelo Safari."
+             : "Se o seu navegador não tiver essa opção, use o Chrome ou o Edge. No Windows, há também a versão para instalar, no Meu kit."}</small>
+         </div>`;
+    const go = t.querySelector('[data-w="sim"]');
+    if (go) go.addEventListener("click", async () => { await instalarSemModal(); mostrarTelaDeInstalar(false); });
+  }
+
+  // O mesmo convite do navegador, sem a janela de instruções: na tela de
+  // instalar elas já estão escritas.
+  async function instalarSemModal() {
+    if (!convite) return;
+    const prompt = convite;
+    convite = null;
+    prompt.prompt();
+    try { await prompt.userChoice; } catch (e) {}
+  }
+
+  window.addEventListener("beforeinstallprompt", () => setTimeout(() => mostrarTelaDeInstalar(false), 0));
+  window.addEventListener("appinstalled", () => mostrarTelaDeInstalar(true));
+  mostrarTelaDeInstalar(false);
+
   async function instalarAgora() {
     if (jaEhApp()) { toast("Você já está usando o app instalado"); return; }
     if (convite) {

@@ -979,3 +979,29 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
   .install-bar__txt { min-width: 0; flex: 1 1 calc(100% - 50px); }
   .install-bar__no, .install-bar__yes { flex: 1; justify-content: center; }
 }
+
+/* ---------- tela de instalar (navegador, no endereço do kit) ---------- */
+html.so-instalar, html.so-instalar body { overflow: hidden; }
+.install-wall {
+  position: fixed; inset: 0; z-index: 200; overflow: auto;
+  display: flex; align-items: center; justify-content: center; padding: 24px 20px;
+  background: var(--bg); color: var(--text);
+}
+.install-wall__card { width: 100%; max-width: 420px; text-align: center; }
+.install-wall__card > img { width: 84px; height: 84px; border-radius: 22px; box-shadow: var(--shadow-sm); }
+.install-wall__card h1 { margin: 18px 0 8px; font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+.install-wall__card p { margin: 0 0 20px; font-size: 15px; line-height: 1.5; color: var(--text-dim); }
+.install-wall__go {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  padding: 15px 18px; border: 0; border-radius: 14px; cursor: pointer;
+  background: var(--accent); color: var(--accent-ink); font-size: 16px; font-weight: 750;
+}
+.install-wall__go svg { width: 18px; height: 18px; }
+.install-wall__steps {
+  margin-top: 18px; padding: 16px 18px; text-align: left;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+}
+.install-wall__steps b { font-size: 14px; }
+.install-wall__steps ol { margin: 10px 0 0; padding-left: 20px; font-size: 14px; line-height: 1.55; color: var(--text-dim); }
+.install-wall__steps li + li { margin-top: 6px; }
+.install-wall__card small { display: block; margin-top: 14px; font-size: 12.5px; line-height: 1.5; color: var(--text-faint); }
