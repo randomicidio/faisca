@@ -4,7 +4,8 @@ const fs = require("fs");
 const http = require("http");
 const path = require("path");
 
-const APP_URL = "https://randomicidio.github.io/faisca/";
+const IS_MAC = process.platform === "darwin";
+const APP_URL = IS_MAC ? "https://dintools.com.br/faisca/" : "https://randomicidio.github.io/faisca/";
 
 // ============================================================
 //  Modo portátil
@@ -119,25 +120,37 @@ async function createWindow() {
     backgroundColor: "#f3f1ec",
     autoHideMenuBar: true,
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      // The kit website provides its own Google Drive session flow.
+      ...(IS_MAC ? {} : { preload: path.join(__dirname, "preload.js") }),
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
     },
   });
 
-  await win.webContents.session.clearStorageData({
-    storages: ["serviceworkers", "cachestorage"],
-  }).catch(() => {});
-  win.loadURL(APP_URL);
+  if (!IS_MAC) {
+    await win.webContents.session.clearStorageData({
+      storages: ["serviceworkers", "cachestorage"],
+    }).catch(() => {});
+  }
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith(APP_URL) || url.startsWith("https://accounts.google.com/")) {
       return { action: "allow" };
     }
-    shell.openExternal(url);
+    if (url.startsWith("https://") || url.startsWith("http://")) {
+      void shell.openExternal(url);
+    }
     return { action: "deny" };
   });
+
+  if (IS_MAC) {
+    win.webContents.on("will-navigate", (event, url) => {
+      if (!url.startsWith("https://")) event.preventDefault();
+    });
+  }
+
+  await win.loadURL(APP_URL);
 }
 
 function base64url(buf) {
@@ -266,7 +279,7 @@ async function desktopOAuth({ clientId, scope, selectAccount }, sender) {
   });
 }
 
-ipcMain.handle("oauth:connect", async (event, args) => {
+if (!IS_MAC) ipcMain.handle("oauth:connect", async (event, args) => {
   try {
     const result = await desktopOAuth(args, event.sender);
     if (!event.sender.isDestroyed()) event.sender.send("oauth:result", { ok: true, token: result });
@@ -277,8 +290,10 @@ ipcMain.handle("oauth:connect", async (event, args) => {
   }
 });
 
-ipcMain.handle("oauth:restore", (_event, { clientId }) => restoreDesktopSession(clientId));
-ipcMain.handle("oauth:disconnect", () => { clearDesktopSession(); return true; });
+if (!IS_MAC) {
+  ipcMain.handle("oauth:restore", (_event, { clientId }) => restoreDesktopSession(clientId));
+  ipcMain.handle("oauth:disconnect", () => { clearDesktopSession(); return true; });
+}
 
 app.whenReady().then(createWindow);
 

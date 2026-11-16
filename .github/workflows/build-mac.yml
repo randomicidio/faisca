@@ -6,7 +6,9 @@ on:
 jobs:
   build-mac:
     name: Build macOS package
-    runs-on: macos-latest
+    runs-on: macos-15
+    permissions:
+      contents: read
 
     steps:
       - name: Baixar projeto
@@ -37,7 +39,10 @@ jobs:
           iconutil -c icns build/icon.iconset -o icons/faisca.icns
 
       - name: Gerar app de Mac
-        run: npm run build:mac
+        run: |
+          test "$(uname -m)" = arm64
+          npm run build:mac -- --arm64
+          hdiutil verify dist/*.dmg
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 

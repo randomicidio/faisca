@@ -3,10 +3,10 @@
 A versao Mac usa Electron. Ela carrega o mesmo app publicado em:
 
 ```text
-https://randomicidio.github.io/faisca/
+https://dintools.com.br/faisca/
 ```
 
-Entao, antes de empacotar, publique a versao web atual no GitHub Pages.
+A entrada usa a conta do Kit DinTools. Dados locais do endereço antigo ficam no perfil daquele endereço. Use o backup do Faísca para levar esses dados ao endereço atual.
 
 ## Onde gerar
 
